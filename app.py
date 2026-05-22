@@ -1418,8 +1418,31 @@ st.markdown(CSS, unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("""
+<style>
+@keyframes magus-pulse {
+  0%   { filter: drop-shadow(0 0 10px rgba(200,151,58,0.35)) drop-shadow(0 0 24px rgba(200,151,58,0.10)); transform: scale(1) rotate(0deg); }
+  25%  { filter: drop-shadow(0 0 22px rgba(200,151,58,0.70)) drop-shadow(0 0 48px rgba(200,151,58,0.25)); transform: scale(1.04) rotate(1deg); }
+  50%  { filter: drop-shadow(0 0 32px rgba(200,151,58,0.90)) drop-shadow(0 0 64px rgba(200,151,58,0.35)); transform: scale(1.07) rotate(0deg); }
+  75%  { filter: drop-shadow(0 0 22px rgba(200,151,58,0.70)) drop-shadow(0 0 48px rgba(200,151,58,0.25)); transform: scale(1.04) rotate(-1deg); }
+  100% { filter: drop-shadow(0 0 10px rgba(200,151,58,0.35)) drop-shadow(0 0 24px rgba(200,151,58,0.10)); transform: scale(1) rotate(0deg); }
+}
+@keyframes magus-stroke {
+  0%   { stroke: #C9A14A; }
+  50%  { stroke: #f0d080; }
+  100% { stroke: #C9A14A; }
+}
+.magus-logo-wrap {
+  display: block;
+  margin: 0 auto 1.2rem;
+  animation: magus-pulse 3.6s ease-in-out infinite;
+  transform-origin: center;
+}
+.magus-logo-wrap path, .magus-logo-wrap line {
+  animation: magus-stroke 3.6s ease-in-out infinite;
+}
+</style>
 <div style="padding:2rem 0.5rem 1.4rem; text-align:center; border-bottom:1px solid rgba(200,151,58,0.09); margin-bottom:0.2rem;">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="88" height="88" style="display:block;margin:0 auto 1.1rem;filter:drop-shadow(0 0 14px rgba(200,151,58,0.45));">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="176" height="176" class="magus-logo-wrap">
     <g transform="translate(256,256)">
       <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
         fill="none" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
