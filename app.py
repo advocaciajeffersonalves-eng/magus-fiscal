@@ -12,7 +12,7 @@ load_dotenv()
 
 REGIMES = ["Simples Nacional", "Lucro Presumido", "Lucro Real", "MEI", "Não sei / A definir"]
 
-# ── Configurações por tipo ────────────────────────────────────────────────────
+# ── Módulo Brasil — config por tipo ──────────────────────────────────────────
 
 TIPO_DESCRICOES = {
     "🏢  Diagnóstico Tributário Empresarial": "Análise completa do perfil fiscal de PJ: regime, créditos, riscos e Reforma Tributária.",
@@ -32,7 +32,7 @@ TIPO_CONFIG = {
     "⚖️  Contencioso Fiscal e Defesas":        {"dre": False, "avancado": False},
 }
 
-# ── System prompts ────────────────────────────────────────────────────────────
+# ── System prompts — Módulo Brasil ────────────────────────────────────────────
 
 _BASE = """Você é o MAGUS Fiscal — analista tributário sênior especializado em direito tributário brasileiro, com profundo conhecimento em engenharia tributária, planejamento fiscal lícito e Reforma Tributária.
 
@@ -368,13 +368,235 @@ _ESTRUTURAS = {
     "⚖️  Contencioso Fiscal e Defesas":        _EST_CONTENCIOSO,
 }
 
+# ── System prompt — Módulo Transição Brasil → EUA ─────────────────────────────
 
-def build_system_prompt(tipo):
+_BASE_TRANSICAO = """Você é o MAGUS Fiscal — especialista em tributação bilateral Brasil-EUA, com profundo conhecimento em:
+- Residência fiscal brasileira e regras de saída definitiva (CSD e DSD)
+- Carnê-leão sobre rendimentos recebidos do exterior (Regulamento do IR, art. 53)
+- Lei 14.754/2023 e IN RFB 2.180/2024 (tributação de entidades no exterior — LLCs, trusts, offshores)
+- CBE/DCBE (declaração de capitais brasileiros no exterior — Banco Central do Brasil)
+- Simples Nacional e vedação para não residentes (LC 123/2006, art. 17, II)
+- FATCA (Decreto 8.506/2015) e troca automática de informações Brasil-EUA
+- Solução de Consulta Cosit nº 56/2026 (classificação fiscal de LLCs nos EUA)
+- IN RFB nº 1.037/2010 (regimes fiscais privilegiados — LLC com sócios não residentes nos EUA)
+- Perguntas e Respostas IRPF 2026 (especialmente questões 125, 130, 140 e 142)
+- Substantial Presence Test (lado americano) e suas implicações para a residência fiscal dupla
+
+Você pensa como um advogado tributarista sênior com experiência bilateral. Conhece:
+- O risco da dupla residência fiscal (tributado no Brasil E nos EUA ao mesmo tempo)
+- As armadilhas do carnê-leão não recolhido (multa de 75% + juros SELIC + representação fiscal)
+- As novas regras de LLC sob a Lei 14.754/2023 (lucro tributado mesmo sem distribuição)
+- A gravidade das multas por descumprimento de CBE (R$ 25.000 a R$ 250.000)
+- A vedação do Simples Nacional para sócios domiciliados no exterior (risco de exclusão retroativa)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REGRAS DE RESIDÊNCIA FISCAL BRASILEIRA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REGRA 1 — SAÍDA FORMALIZADA:
+Se houve saída permanente E CSD (Comunicação de Saída Definitiva) + DSD (Declaração de Saída Definitiva) foram apresentados corretamente → classificar como PROVÁVEL NÃO RESIDENTE a partir da data informada na CSD.
+
+REGRA 2 — SAÍDA NÃO FORMALIZADA, MAS LONGA:
+Sem CSD/DSD, mas ausência consecutiva superior a 12 meses → classificar como PROVÁVEL NÃO RESIDENTE a partir do dia seguinte ao 12º mês de ausência consecutiva. MAS: marcar RISCO DOCUMENTAL ALTO — a Receita pode questionar o período de residência e exigir IR sobre todo o período não declarado.
+
+REGRA 3 — AUSÊNCIA CURTA SEM FORMALIZAÇÃO:
+Sem CSD/DSD e menos de 12 meses de ausência consecutiva → AINDA É RESIDENTE FISCAL BRASILEIRO. Obrigações plenas: IRPF anual, carnê-leão mensal, GCAP, CBE se aplicável.
+
+REGRA 4 — RETORNOS AO BRASIL:
+Retornos ao Brasil podem interromper a contagem de ausência consecutiva. Se houve retorno por mais de 30 dias consecutivos, reinicia a contagem. Analisar com cuidado.
+
+REGRA 5 — VÍNCULOS FORTES:
+Manutenção de vínculos fortes (empresa ativa como titular/sócio majoritário, fonte pagadora, imóvel residencial como domicílio principal) pode indicar residência fiscal mesmo após saída, mesmo com CSD/DSD — jurisprudência administrativa em formação.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CARNÊ-LEÃO 2025 — TABELA PROGRESSIVA MENSAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+| Base de Cálculo Mensal (R$) | Alíquota | Parcela a Deduzir (R$) |
+|---|---|---|
+| Até 2.259,20 | Isento | — |
+| De 2.259,21 a 2.826,65 | 7,5% | 169,44 |
+| De 2.826,66 a 3.751,05 | 15% | 381,44 |
+| De 3.751,06 a 4.664,68 | 22,5% | 662,77 |
+| Acima de 4.664,68 | 27,5% | 896,00 |
+
+CÂMBIO: usar PTAX do último dia útil do mês de recebimento (tabela do Banco Central). Para estimativas, usar câmbio informado pelo usuário.
+COMPENSAÇÃO: imposto pago no exterior pode ser compensado, limitado ao imposto calculado no Brasil para aquela renda.
+PRAZO: recolhimento mensal via DARF, código 0190, até o último dia útil do mês seguinte ao recebimento.
+PENALIDADE POR ATRASO: multa de 75% (150% se fraude) + juros SELIC. Representação fiscal para fins penais se valor superar R$ 2,5 milhões.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LEI 14.754/2023 — ENTIDADES NO EXTERIOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Vigência: 01/01/2024. Regulamentada pela IN RFB 2.180/2024.
+
+LLC DISREGARDED ENTITY (sócio único) com sócio RESIDENTE no Brasil:
+- Lucros tributados pelo IRPF à alíquota de 27,5% sobre o lucro contábil anual
+- Tributação ocorre em 31/12 de cada ano, MESMO SEM DISTRIBUIÇÃO
+- Imposto via DARF, prazo até 31 de maio do ano seguinte
+- Obrigação de informar na DIRPF: balanço em reais, lucro/prejuízo, distribuições
+
+SC COSIT 56/2026:
+- LLC transparente com sócios não residentes nos EUA pode ser classificada como regime fiscal privilegiado conforme IN RFB 1.037/2010
+- Tributação diferenciada e obrigações acessórias adicionais se aplicável
+
+ALERTA DE NÃO RESIDENTE:
+- Se o sócio da LLC foi classificado como NÃO RESIDENTE fiscal brasileiro → a Lei 14.754/2023 pode não se aplicar para o período posterior à perda da residência
+- MAS: o período anterior à perda de residência pode ainda gerar obrigação fiscal se os lucros não foram declarados
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CBE/DCBE — BANCO CENTRAL DO BRASIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OBRIGAÇÃO ANUAL:
+- Residente brasileiro com ativos no exterior em 31/12 >= US$ 1.000.000 → CBE anual obrigatória
+- Prazo: até 05 de abril do ano seguinte
+
+OBRIGAÇÃO TRIMESTRAL:
+- Ativos no exterior em qualquer data base trimestral >= US$ 100.000.000 → CBE trimestral
+
+ATIVOS QUE DEVEM SER DECLARADOS:
+Contas bancárias, corretoras/brokerage accounts, imóveis, participação em LLCs e empresas, criptoativos, empréstimos a receber no exterior, outros ativos financeiros.
+
+PENALIDADES:
+- Não entrega: multa de R$ 25.000 a R$ 250.000 (resolução BCB 278/2022)
+- Declaração incorreta: multa adicional proporcional ao valor omitido
+- Sem prescrição enquanto a omissão não for regularizada
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SIMPLES NACIONAL E NÃO RESIDENTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LC 123/2006, art. 17, II: É vedada a opção pelo Simples Nacional à empresa cujo titular ou sócio seja domiciliado no exterior.
+
+Se o usuário for classificado como não residente ou domiciliado no exterior:
+- Gerar ALERTA OBRIGATÓRIO sobre o enquadramento da empresa brasileira no Simples
+- Não concluir automaticamente exclusão — gerar alerta para revisão profissional urgente
+- Risco: exclusão retroativa com lançamento da diferença de tributos em regime normal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FATCA E TROCA AUTOMÁTICA DE INFORMAÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Decreto 8.506/2015: Brasil e EUA trocam informações financeiras automaticamente via FATCA
+- Contas bancárias e de investimento no Brasil de pessoas com vínculo com os EUA (green card, cidadania, substantial presence) são reportadas ao IRS americano
+- Contas nos EUA de brasileiros são reportadas à Receita Federal brasileira
+- Implicação prática: omissões fiscais bilaterais têm alta probabilidade de detecção cruzada"""
+
+_EST_TRANSICAO = """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ESTRUTURA OBRIGATÓRIA DE RESPOSTA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# MAGUS FISCAL — SAÍDA FISCAL BRASIL → EUA
+
+**Residente em:** [país]  **Data de Saída:** [data]  **Tipo:** [permanente/temporária]  **Data da Análise:** [mês/ano]
+
+---
+## 1. RESUMO EXECUTIVO
+Síntese objetiva da situação fiscal bilateral. O que é mais urgente. Nível geral de risco.
+
+---
+## 2. STATUS DE RESIDÊNCIA FISCAL BRASILEIRA
+
+**Classificação:** 🔴 PROVÁVEL RESIDENTE | 🟡 PERÍODO DE TRANSIÇÃO / RISCO DOCUMENTAL | 🟢 PROVÁVEL NÃO RESIDENTE | ⚪ REQUER REVISÃO PROFISSIONAL
+
+Fundamento legal da classificação. Datas-chave relevantes. O que está faltando para formalizar a saída. Riscos de manter o status atual.
+
+---
+## 3. DASHBOARD DE RISCOS FISCAIS
+
+| Área | Situação Identificada | Nível |
+|---|---|---|
+| Residência fiscal brasileira | | 🔴/🟡/🟢 |
+| Carnê-leão (rendimentos exterior) | | 🔴/🟡/🟢 |
+| LLC / Entidade no exterior | | 🔴/🟡/🟢 |
+| CBE/DCBE (Banco Central) | | 🔴/🟡/🟢 |
+| Empresa brasileira (Simples/MEI) | | 🔴/🟡/🟢 |
+| FATCA / Troca de informações | | 🔴/🟡/🟢 |
+| Documentação faltante | | 🔴/🟡/🟢 |
+
+---
+## 4. CARNÊ-LEÃO — ANÁLISE PRELIMINAR
+Existe obrigação de recolhimento? Qual período está em aberto? Se informados valores de renda: estimativa mensal preliminar com aplicação da tabela progressiva (converter para reais pelo câmbio informado ou estimado). Risco de multa e juros acumulados. O que precisa ser regularizado e como.
+
+---
+## 5. LLC E ENTIDADES NO EXTERIOR
+Classificação da entidade informada. Análise sob a Lei 14.754/2023 e IN RFB 2.180/2024. SC Cosit 56/2026 e IN RFB 1.037/2010 — risco de regime privilegiado. Obrigações de declaração e pagamento. Período de tributação aplicável. Alertas específicos.
+
+---
+## 6. CBE/DCBE — CAPITAIS BRASILEIROS NO EXTERIOR
+Existe obrigação de declarar ao Banco Central? Threshold aplicável ao caso. Quais ativos devem ser declarados. Penalidade estimada pelo descumprimento. Como regularizar.
+
+---
+## 7. EMPRESA BRASILEIRA — ANÁLISE LC 123/2006
+Se houver MEI ou empresa no Simples Nacional: análise direta da vedação para sócios domiciliados no exterior. Risco de exclusão retroativa. O que deve ser avaliado com profissional urgentemente.
+
+---
+## 8. CHECKLIST DE DOCUMENTOS
+Lista prática de documentos necessários para regularização completa, separados por área:
+- Para a saída fiscal (RFB)
+- Para o carnê-leão (se aplicável)
+- Para LLC/entidade (se aplicável)
+- Para CBE (Banco Central, se aplicável)
+- Para a empresa brasileira (se aplicável)
+- Para coordenação com contador americano
+
+---
+## 9. MEMO FOR U.S. ACCOUNTANT
+*[This section is written in English for coordination with the U.S.-based tax professional]*
+
+**Key Brazilian Tax Considerations — Client Relocating to the United States**
+
+**Brazilian Tax Residency:**
+- Brazilian tax residency does not automatically end upon physical relocation. Two formal documents are required: the Comunicação de Saída Definitiva do País (CSD) and the Declaração de Saída Definitiva do País (DSD). Without these, Brazilian tax obligations may continue for up to 12 months of consecutive absence, and potentially longer.
+- Please request confirmation of whether these documents were filed, and on what dates.
+
+**Continuing Brazilian Tax Obligations:**
+- If the client was a Brazilian tax resident during any part of the year, Brazilian income tax (IRPF) and carnê-leão obligations apply to worldwide income during that period.
+- Carnê-leão is a monthly self-assessed tax on income received from foreign sources by Brazilian residents — not withheld at source. Failure to collect is subject to 75% penalty plus SELIC interest.
+
+**U.S. LLC and Brazilian Tax Treatment:**
+- A U.S. LLC classified as a disregarded entity for U.S. federal tax purposes is NOT automatically treated as transparent under Brazilian tax law.
+- Under Lei 14.754/2023 (effective 01/01/2024), Brazilian tax residents who own or control foreign entities are subject to annual taxation on the entity's accounting profits at 27.5%, even without actual distribution.
+- SC Cosit 56/2026 may classify certain LLCs with non-U.S.-resident members as entities in a privileged tax jurisdiction — additional Brazilian reporting obligations may apply.
+
+**No Full Tax Treaty:**
+- Brazil and the United States do not have a comprehensive income tax treaty. Foreign tax credits are available under domestic Brazilian law but with limitations. Timing differences and income characterization mismatches should be reviewed carefully.
+
+**FATCA and Information Exchange:**
+- Brazil and the U.S. exchange financial account information automatically under the FATCA agreement (Decree 8.506/2015). Brazilian financial institutions report accounts of U.S. persons to the IRS; U.S. financial institutions report Brazilian residents' accounts to Receita Federal. Coordination is essential.
+
+**Recommended Coordination Points:**
+1. Confirm Brazilian tax residency status and effective exit date.
+2. Determine whether CSD and DSD were filed, and on what dates.
+3. Assess carnê-leão exposure for periods of Brazilian tax residency.
+4. Analyze LLC treatment under Lei 14.754/2023 for periods of Brazilian residency.
+5. Review CBE (Banco Central) reporting obligations for foreign assets.
+6. Coordinate FBAR/FATCA filings with Brazilian DIRPF and CBE filings to ensure consistency.
+
+---
+## 10. PRÓXIMOS PASSOS
+
+**⚡ Imediato (próximos 30 dias)** — O que não pode esperar
+
+**📅 Próximos 3 meses** — Regularização e compliance
+
+**🔭 Longo prazo** — Estruturação e planejamento
+
+---
+*AVISO IMPORTANTE: Esta análise é preliminar e educacional. Os cálculos são estimativas baseadas nas informações fornecidas e não substituem aconselhamento profissional. Situações com múltiplas jurisdições, entidades no exterior, omissões fiscais anteriores ou status jurídico incerto exigem revisão por advogado tributarista e/ou contador especializado em tributação internacional. A MAGUS Fiscal não se responsabiliza por decisões tomadas com base exclusiva nesta análise.*"""
+
+
+def build_system_prompt(tipo, modulo="brasil"):
+    if modulo == "transicao":
+        return _BASE_TRANSICAO + "\n" + _EST_TRANSICAO + _PRINCIPIOS
     estrutura = _ESTRUTURAS.get(tipo, _EST_EMPRESARIAL)
     return _BASE + "\n" + estrutura + _PRINCIPIOS
 
 
-# ── Formulários por tipo ──────────────────────────────────────────────────────
+# ── Formulários — Módulo Brasil ────────────────────────────────────────────────
 
 def _form_empresarial():
     dados = {}
@@ -470,6 +692,101 @@ def _form_contencioso():
     return dados, ok
 
 
+# ── Formulário — Módulo Transição Brasil → EUA ────────────────────────────────
+
+def _form_transicao():
+    dados = {}
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        dados["pais_residencia"] = st.text_input(
+            "País atual de residência",
+            placeholder="Ex: Estados Unidos"
+        )
+        dados["data_saida"] = st.text_input(
+            "Data aproximada de saída do Brasil",
+            placeholder="Ex: junho de 2022, 15/03/2023..."
+        )
+        dados["tipo_saida"] = st.selectbox("Tipo de saída do Brasil", [
+            "Permanente / Definitiva",
+            "Temporária (prazo determinado)",
+            "Indefinida / Não formalizada"
+        ])
+    with c2:
+        dados["csd"] = st.selectbox("Comunicação de Saída Definitiva (CSD)?", [
+            "Não apresentou",
+            "Sim — apresentou",
+            "Não sabe"
+        ])
+        dados["dsd"] = st.selectbox("Declaração de Saída Definitiva (DSD)?", [
+            "Não apresentou",
+            "Sim — apresentou",
+            "Não sabe"
+        ])
+        dados["retornos"] = st.selectbox("Retornou ao Brasil após a saída?", [
+            "Não retornou",
+            "Sim — visitas curtas (menos de 30 dias por viagem)",
+            "Sim — visitas longas (mais de 30 dias em alguma viagem)",
+            "Sim — ficou mais de 183 dias em algum ano-calendário"
+        ])
+    with c3:
+        dados["status_eua"] = st.selectbox("Status migratório nos EUA", [
+            "Cidadão americano (naturalizado ou nato)",
+            "Green Card (residente permanente)",
+            "Visto de trabalho (H-1B, L-1, O-1)",
+            "Visto de investidor (EB-5)",
+            "Outro visto temporário",
+            "Substantial Presence Test atingido",
+            "Status incerto / sob análise"
+        ])
+        dados["empresa_brasil"] = st.selectbox("Mantém empresa no Brasil?", [
+            "Não",
+            "Sim — MEI",
+            "Sim — empresa no Simples Nacional",
+            "Sim — empresa no Lucro Presumido ou Real"
+        ])
+
+    st.markdown("")
+
+    r1, r2 = st.columns(2)
+    with r1:
+        dados["rendimentos_exterior"] = st.text_area(
+            "Rendimentos no exterior — descreva cada fonte",
+            placeholder="Ex: salário W-2 US$ 120k/ano, LLC com lucro US$ 50k/ano, dividendos US$ 5k, trabalho autônomo 1099 US$ 30k...",
+            height=100
+        )
+        dados["entidade_exterior"] = st.selectbox("Possui LLC ou empresa no exterior?", [
+            "Não",
+            "Sim — LLC (sócio único — disregarded entity)",
+            "Sim — LLC (múltiplos sócios — partnership)",
+            "Sim — C-Corporation",
+            "Sim — Trust",
+            "Sim — outra estrutura"
+        ])
+        dados["ativos_exterior_usd"] = st.text_input(
+            "Total aproximado de ativos no exterior (em US$)",
+            placeholder="Ex: US$ 500.000, US$ 1,2 milhão, US$ 3 milhões..."
+        )
+    with r2:
+        dados["bens_brasil"] = st.text_area(
+            "Bens e vínculos mantidos no Brasil (descreva)",
+            placeholder="Ex: imóvel residencial alugado, conta no Bradesco, corretora XP, dependentes (filhos menores), empresa ativa...",
+            height=100
+        )
+        dados["renda_brasil"] = st.text_input(
+            "Rendimentos de fonte brasileira (se houver)",
+            placeholder="Ex: aluguel R$ 5k/mês, dividendos de empresa brasileira R$ 20k/ano..."
+        )
+        dados["questao"] = st.text_area(
+            "Dúvida ou objetivo principal",
+            placeholder="Ex: Quero regularizar minha saída fiscal. Tenho LLC e não sei se devo declarar no Brasil. Preciso entender o carnê-leão e se minha empresa pode ficar no Simples...",
+            height=110
+        )
+
+    ok = bool(dados.get("pais_residencia") and dados.get("data_saida") and dados.get("questao"))
+    return dados, ok
+
+
 _FORMS = {
     "🏢  Diagnóstico Tributário Empresarial": _form_empresarial,
     "👤  Check-up Fiscal — Pessoa Física":    _form_pf,
@@ -484,7 +801,7 @@ def render_formulario(tipo):
     return _FORMS.get(tipo, _form_empresarial)()
 
 
-# ── Formatação da descrição para o Claude ────────────────────────────────────
+# ── Formatação para o Claude ──────────────────────────────────────────────────
 
 def formatar_descricao(dados, tipo, dre_texto=None, previsao=None):
     t = tipo
@@ -563,15 +880,40 @@ def formatar_descricao(dados, tipo, dre_texto=None, previsao=None):
     return desc
 
 
+def formatar_descricao_transicao(dados):
+    return (
+        f"Tipo de Análise: Saída Fiscal Brasil para EUA — Tributação Bilateral\n"
+        f"País Atual de Residência: {dados.get('pais_residencia','')}\n"
+        f"Data de Saída do Brasil: {dados.get('data_saida','')}\n"
+        f"Tipo de Saída: {dados.get('tipo_saida','')}\n"
+        f"Comunicação de Saída Definitiva (CSD): {dados.get('csd','')}\n"
+        f"Declaração de Saída Definitiva (DSD): {dados.get('dsd','')}\n"
+        f"Retornos ao Brasil após a saída: {dados.get('retornos','')}\n"
+        f"Status Migratório nos EUA: {dados.get('status_eua','')}\n"
+        f"Empresa no Brasil: {dados.get('empresa_brasil','')}\n"
+        f"Rendimentos no Exterior: {dados.get('rendimentos_exterior','')}\n"
+        f"Entidade / LLC no Exterior: {dados.get('entidade_exterior','')}\n"
+        f"Total de Ativos no Exterior (USD): {dados.get('ativos_exterior_usd','')}\n"
+        f"Bens e Vínculos Mantidos no Brasil: {dados.get('bens_brasil','')}\n"
+        f"Rendimentos de Fonte Brasileira: {dados.get('renda_brasil','')}\n"
+        f"Dúvida / Objetivo Principal: {dados.get('questao','')}"
+    )
+
+
 # ── API ───────────────────────────────────────────────────────────────────────
 
-def analisar(dados, tipo, dre_texto=None, previsao=None):
+def analisar(dados, tipo, dre_texto=None, previsao=None, modulo="brasil"):
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    system = build_system_prompt(tipo)
-    descricao = formatar_descricao(dados, tipo, dre_texto, previsao)
+    system = build_system_prompt(tipo, modulo)
+    if modulo == "transicao":
+        descricao = formatar_descricao_transicao(dados)
+        max_tok = 4000
+    else:
+        descricao = formatar_descricao(dados, tipo, dre_texto, previsao)
+        max_tok = 3500
     resposta = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=3500,
+        max_tokens=max_tok,
         system=system,
         messages=[{"role": "user", "content": descricao}]
     )
@@ -616,7 +958,9 @@ def _limpar_para_pdf(texto):
     subst = {
         "🔴": "[ALTO]", "🟡": "[MEDIO]", "🟢": "[BAIXO]", "🟠": "[MEDIO-ALTO]",
         "⚡": "[!]", "📅": "", "🔭": "", "✓": "[OK]", "━": "-",
-        "—": "-", "–": "-", "'": "'", "“": '"', "”": '"',
+        "—": "-", "–": "-", "'": "'", "‘": "'", "’": "'",
+        "“": '"', "”": '"', "→": "->", "🇧🇷": "[BR]", "🇺🇸": "[EUA]",
+        "⚪": "[?]",
     }
     for orig, repl in subst.items():
         texto = texto.replace(orig, repl)
@@ -642,13 +986,21 @@ def get_pdf_meta(dados, tipo):
         return dados.get("setor",""), dados.get("regime",""), dados.get("faturamento","")
     if t == "⚖️  Contencioso Fiscal e Defesas":
         return dados.get("tributo",""), dados.get("esfera",""), dados.get("valor_envolvido","")
+    if t == "transicao":
+        return dados.get("pais_residencia",""), dados.get("tipo_saida",""), dados.get("data_saida","")
     return "", "", ""
 
 
 def gerar_pdf(resultado, dados, tipo_diagnostico):
-    tipo_limpo = _limpar_para_pdf(re.sub(r"[^\w\s\-/.,]", " ", tipo_diagnostico).strip())
+    tipo_limpo = _limpar_para_pdf(re.sub(r"[^\w\s\-/.,>]", " ", tipo_diagnostico).strip())
     meta1, meta2, meta3 = [_limpar_para_pdf(s) for s in get_pdf_meta(dados, tipo_diagnostico)]
     texto = _limpar_para_pdf(resultado)
+
+    if tipo_diagnostico == "transicao":
+        subtitulo = "Analista Tributario Assistido por IA  |  Analise Bilateral Brasil-EUA"
+        tipo_limpo = "Saida Fiscal Brasil -> EUA"
+    else:
+        subtitulo = "Analista Tributario Assistido por IA  |  Prototipo 0.1"
 
     pdf = FPDF()
     pdf.set_margins(left=15, top=15, right=15)
@@ -662,7 +1014,7 @@ def gerar_pdf(resultado, dados, tipo_diagnostico):
 
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(120, 120, 140)
-    pdf.set_x(lx); pdf.cell(pdf.epw, 6, "Analista Tributario Assistido por IA  |  Prototipo 0", ln=True)
+    pdf.set_x(lx); pdf.cell(pdf.epw, 6, subtitulo, ln=True)
 
     pdf.ln(3)
     pdf.set_draw_color(50, 50, 70)
@@ -705,7 +1057,7 @@ def gerar_pdf(resultado, dados, tipo_diagnostico):
     pdf.line(lx, pdf.get_y(), rx, pdf.get_y()); pdf.ln(4)
     pdf.set_font("Helvetica", "I", 8); pdf.set_text_color(120, 120, 140)
     pdf.set_x(lx)
-    pdf.cell(pdf.epw, 5, "MAGUS Fiscal - Prototipo 0  |  Use apenas dados ficticios ou anonimizados", align="C")
+    pdf.cell(pdf.epw, 5, "MAGUS Fiscal - Prototipo 0.1  |  Use apenas dados ficticios ou anonimizados", align="C")
 
     return bytes(pdf.output())
 
@@ -758,6 +1110,8 @@ CSS = """
     .stExpander summary { color:#c8973a !important; font-weight:600 !important; }
     .stButton > button[kind="primary"] { background-color:#c8973a !important; color:#0a0d14 !important; font-weight:700 !important; font-size:1rem !important; border:none !important; padding:0.6rem 2rem !important; border-radius:6px !important; width:100%; letter-spacing:0.03em; }
     .stButton > button[kind="primary"]:hover { background-color:#e0aa4a !important; }
+    .stButton > button[kind="secondary"] { background-color:#141824 !important; color:#8a8f9e !important; border:1px solid #2d3348 !important; font-weight:600 !important; font-size:0.9rem !important; border-radius:6px !important; width:100%; }
+    .stButton > button[kind="secondary"]:hover { border-color:#c8973a !important; color:#c8973a !important; background-color:#141824 !important; }
     .stButton > button:disabled { opacity:0.4 !important; }
     .resultado-titulo { color:#c8973a; font-size:1rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #2d3348; }
     hr { border-color:#2d3348 !important; }
@@ -765,12 +1119,15 @@ CSS = """
     .magus-footer { color:#3d4357; font-size:0.75rem; text-align:center; margin-top:2rem; padding-top:1rem; border-top:1px solid #1a1f2e; }
     .arquivo-ok { background-color:#0d1f12; border:1px solid #2a5c35; border-radius:6px; padding:0.5rem 0.8rem; color:#5cb87a; font-size:0.85rem; margin-top:0.3rem; }
     .tipo-desc { color:#7a8099; font-size:0.82rem; margin-top:0.2rem; font-style:italic; }
+    .banner-transicao { background:#0a1420; border:1px solid #1a3a5c; border-radius:8px; padding:0.8rem 1.2rem; margin-bottom:1rem; }
+    .banner-transicao-titulo { color:#4a9eff; font-size:0.85rem; font-weight:600; margin-bottom:0.3rem; }
+    .banner-transicao-texto { color:#7a90a8; font-size:0.82rem; }
 </style>
 """
 
 # ── Session state ─────────────────────────────────────────────────────────────
 
-for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", "")]:
+for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), ("modulo", "brasil")]:
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -796,159 +1153,238 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Seletor de módulo ──────────────────────────────────────────────────────────
+
+mod_c1, mod_c2, mod_c3 = st.columns([1.5, 2.2, 4])
+with mod_c1:
+    btn_brasil = st.button(
+        "🇧🇷  Módulo Brasil",
+        key="btn_mod_brasil",
+        type="primary" if st.session_state.modulo == "brasil" else "secondary",
+        use_container_width=True
+    )
+with mod_c2:
+    btn_transicao = st.button(
+        "🇧🇷🇺🇸  Transição Brasil → EUA",
+        key="btn_mod_transicao",
+        type="primary" if st.session_state.modulo == "transicao" else "secondary",
+        use_container_width=True
+    )
+
+if btn_brasil and st.session_state.modulo != "brasil":
+    st.session_state.modulo = "brasil"
+    st.session_state.resultado = None
+    st.rerun()
+if btn_transicao and st.session_state.modulo != "transicao":
+    st.session_state.modulo = "transicao"
+    st.session_state.resultado = None
+    st.rerun()
+
 st.divider()
 
-# ── Tipo de diagnóstico ───────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# MÓDULO BRASIL
+# ══════════════════════════════════════════════════════════════════════════════
 
-st.markdown('<div class="section-title">Tipo de Diagnóstico</div>', unsafe_allow_html=True)
-tipo_diagnostico = st.selectbox("Tipo", options=list(TIPO_DESCRICOES.keys()), label_visibility="collapsed")
-st.markdown(f'<div class="tipo-desc">{TIPO_DESCRICOES.get(tipo_diagnostico,"")}</div>', unsafe_allow_html=True)
-st.markdown("")
-st.divider()
+if st.session_state.modulo == "brasil":
 
-# ── Formulário (dinâmico por tipo) ────────────────────────────────────────────
+    st.markdown('<div class="section-title">Tipo de Diagnóstico</div>', unsafe_allow_html=True)
+    tipo_diagnostico = st.selectbox("Tipo", options=list(TIPO_DESCRICOES.keys()), label_visibility="collapsed")
+    st.markdown(f'<div class="tipo-desc">{TIPO_DESCRICOES.get(tipo_diagnostico,"")}</div>', unsafe_allow_html=True)
+    st.markdown("")
+    st.divider()
 
-st.markdown('<div class="section-title">Dados para Análise</div>', unsafe_allow_html=True)
-st.markdown("")
+    st.markdown('<div class="section-title">Dados para Análise</div>', unsafe_allow_html=True)
+    st.markdown("")
 
-dados, campos_ok = render_formulario(tipo_diagnostico)
+    dados, campos_ok = render_formulario(tipo_diagnostico)
 
-st.divider()
+    st.divider()
 
-cfg = TIPO_CONFIG.get(tipo_diagnostico, {"dre": False, "avancado": False})
+    cfg = TIPO_CONFIG.get(tipo_diagnostico, {"dre": False, "avancado": False})
 
-# ── DRE (somente nos tipos que pedem) ────────────────────────────────────────
+    dre_texto = None
 
-dre_texto = None
+    if cfg["dre"]:
+        st.markdown('<div class="section-title">Dados Financeiros — DRE (opcional)</div>', unsafe_allow_html=True)
+        st.caption("Forneça os dados financeiros para enriquecer a análise.")
 
-if cfg["dre"]:
-    st.markdown('<div class="section-title">Dados Financeiros — DRE (opcional)</div>', unsafe_allow_html=True)
-    st.caption("Forneça os dados financeiros para enriquecer a análise.")
+        aba_upload, aba_form = st.tabs(["📎  Carregar arquivo (PDF, Excel, CSV)", "📝  Preencher formulário manualmente"])
 
-    aba_upload, aba_form = st.tabs(["📎  Carregar arquivo (PDF, Excel, CSV)", "📝  Preencher formulário manualmente"])
+        with aba_upload:
+            st.markdown("")
+            arq = st.file_uploader("DRE", type=["pdf","xlsx","xls","csv"], label_visibility="collapsed")
+            if arq:
+                try:
+                    dre_texto = extrair_conteudo_arquivo(arq)
+                    if dre_texto:
+                        st.markdown(f'<div class="arquivo-ok">✓ Arquivo carregado: <strong>{arq.name}</strong></div>', unsafe_allow_html=True)
+                    else:
+                        st.warning("Não foi possível extrair texto deste arquivo.")
+                except Exception as e:
+                    st.error(f"Erro ao processar arquivo: {e}")
 
-    with aba_upload:
-        st.markdown("")
-        arq = st.file_uploader("DRE", type=["pdf","xlsx","xls","csv"], label_visibility="collapsed")
-        if arq:
+        with aba_form:
+            st.markdown("")
+            st.markdown("**Preencha o que souber. Deixe em branco o restante.**")
+            fc1, fc2 = st.columns(2)
+            with fc1:
+                st.markdown("**Receitas**")
+                dre_rb  = st.text_input("Receita Bruta Total", placeholder="Ex: 6.200.000", key="dre_rb")
+                dre_ded = st.text_input("Deduções (ISS, PIS, COFINS)", placeholder="Ex: 412.300", key="dre_ded")
+                dre_rl  = st.text_input("Receita Líquida", placeholder="Ex: 5.787.700", key="dre_rl")
+                st.markdown("**Custos**")
+                dre_mat = st.text_input("Materiais / Insumos", placeholder="Ex: 2.232.000", key="dre_mat")
+                dre_mo  = st.text_input("Mão de obra direta", placeholder="Ex: 1.116.000", key="dre_mo")
+                dre_ter = st.text_input("Subcontratados / Terceiros", placeholder="Ex: 558.000", key="dre_ter")
+                dre_ct  = st.text_input("Total de Custos", placeholder="Ex: 4.216.000", key="dre_ct")
+                dre_lb  = st.text_input("Lucro Bruto", placeholder="Ex: 1.571.700", key="dre_lb")
+            with fc2:
+                st.markdown("**Despesas Operacionais**")
+                dre_adm = st.text_input("Despesas Administrativas", placeholder="Ex: 420.000", key="dre_adm")
+                dre_sal = st.text_input("Salários e encargos administrativo", placeholder="Ex: 312.000", key="dre_sal")
+                dre_com = st.text_input("Despesas Comerciais", placeholder="Ex: 124.000", key="dre_com")
+                dre_fin = st.text_input("Despesas Financeiras (juros, IOF)", placeholder="Ex: 248.000", key="dre_fin")
+                dre_dep = st.text_input("Depreciação", placeholder="Ex: 186.000", key="dre_dep")
+                st.markdown("**Resultado e Pessoal**")
+                dre_res = st.text_input("Resultado antes do IR/CSLL", placeholder="Ex: 281.700", key="dre_res")
+                dre_ir  = st.text_input("IR e CSLL pagos", placeholder="Ex: 123.008", key="dre_ir")
+                dre_ll  = st.text_input("Lucro Líquido", placeholder="Ex: 158.692", key="dre_ll")
+                dre_func = st.text_input("Funcionários CLT", placeholder="Ex: 42", key="dre_func")
+                dre_folha= st.text_input("Folha mensal", placeholder="Ex: 186.000", key="dre_folha")
+
+            campos_form = [dre_rb, dre_rl, dre_lb, dre_ll, dre_mat, dre_mo, dre_res]
+            if any(campos_form):
+                linhas = ["--- DADOS FINANCEIROS (DRE — Formulário) ---"]
+                for label, val in [
+                    ("Receita Bruta", dre_rb), ("Deduções", dre_ded), ("Receita Líquida", dre_rl),
+                    ("Materiais/Insumos", dre_mat), ("Mão de obra direta", dre_mo),
+                    ("Subcontratados", dre_ter), ("Total de Custos", dre_ct), ("Lucro Bruto", dre_lb),
+                    ("Desp. Administrativas", dre_adm), ("Salários Adm.", dre_sal),
+                    ("Desp. Comerciais", dre_com), ("Desp. Financeiras", dre_fin),
+                    ("Depreciação", dre_dep), ("Result. antes IR/CSLL", dre_res),
+                    ("IR e CSLL pagos", dre_ir), ("Lucro Líquido", dre_ll),
+                    ("Funcionários CLT", dre_func), ("Folha mensal", dre_folha),
+                ]:
+                    if val: linhas.append(f"{label}: R$ {val}" if label != "Funcionários CLT" else f"Funcionários CLT: {val}")
+                dre_texto = "\n".join(linhas)
+                st.markdown('<div class="arquivo-ok">✓ Formulário preenchido — dados prontos para análise.</div>', unsafe_allow_html=True)
+
+        st.divider()
+
+    previsao_texto = None
+
+    if cfg["avancado"]:
+        with st.expander("Opções Avançadas — Previsão de Faturamento e Simulação de Regime"):
+            st.caption("Informe projeções para que o MAGUS compare regimes e simule cenários.")
+            ca, cb = st.columns(2)
+            with ca:
+                fat1 = st.text_input("Faturamento Projetado (próximo ano)", placeholder="Ex: R$ 4 milhões")
+                fat2 = st.text_input("Faturamento Projetado (em 2 anos)", placeholder="Ex: R$ 8 milhões")
+            with cb:
+                nfunc = st.text_input("Número de Funcionários", placeholder="Ex: 12")
+                folha = st.text_input("Folha de Pagamento Mensal", placeholder="Ex: R$ 80 mil")
+            obs = st.text_area("Observações adicionais", placeholder="Ex: Pretendemos abrir filial em outro estado...", height=70)
+            if fat1 or fat2:
+                partes = []
+                if fat1:  partes.append(f"Faturamento projetado próximo ano: {fat1}")
+                if fat2:  partes.append(f"Faturamento projetado 2 anos: {fat2}")
+                if nfunc: partes.append(f"Número de funcionários: {nfunc}")
+                if folha: partes.append(f"Folha mensal: {folha}")
+                if obs:   partes.append(f"Observações: {obs}")
+                previsao_texto = "\n".join(partes)
+        st.divider()
+
+    if not campos_ok:
+        st.info("Preencha os campos obrigatórios para iniciar a análise.")
+
+    btn = st.button("Analisar", type="primary", disabled=not campos_ok)
+
+    if btn:
+        with st.spinner("Analisando... Isso pode levar alguns segundos."):
             try:
-                dre_texto = extrair_conteudo_arquivo(arq)
-                if dre_texto:
-                    st.markdown(f'<div class="arquivo-ok">✓ Arquivo carregado: <strong>{arq.name}</strong></div>', unsafe_allow_html=True)
-                else:
-                    st.warning("Não foi possível extrair texto deste arquivo.")
+                resultado = analisar(dados, tipo_diagnostico, dre_texto, previsao_texto, modulo="brasil")
+                st.session_state.resultado    = resultado
+                st.session_state.analise_dados = dados
+                st.session_state.analise_tipo  = tipo_diagnostico
             except Exception as e:
-                st.error(f"Erro ao processar arquivo: {e}")
+                st.error(f"Erro ao conectar com o motor de IA: {e}")
 
-    with aba_form:
-        st.markdown("")
-        st.markdown("**Preencha o que souber. Deixe em branco o restante.**")
-        fc1, fc2 = st.columns(2)
-        with fc1:
-            st.markdown("**Receitas**")
-            dre_rb  = st.text_input("Receita Bruta Total", placeholder="Ex: 6.200.000", key="dre_rb")
-            dre_ded = st.text_input("Deduções (ISS, PIS, COFINS)", placeholder="Ex: 412.300", key="dre_ded")
-            dre_rl  = st.text_input("Receita Líquida", placeholder="Ex: 5.787.700", key="dre_rl")
-            st.markdown("**Custos**")
-            dre_mat = st.text_input("Materiais / Insumos", placeholder="Ex: 2.232.000", key="dre_mat")
-            dre_mo  = st.text_input("Mão de obra direta", placeholder="Ex: 1.116.000", key="dre_mo")
-            dre_ter = st.text_input("Subcontratados / Terceiros", placeholder="Ex: 558.000", key="dre_ter")
-            dre_ct  = st.text_input("Total de Custos", placeholder="Ex: 4.216.000", key="dre_ct")
-            dre_lb  = st.text_input("Lucro Bruto", placeholder="Ex: 1.571.700", key="dre_lb")
-        with fc2:
-            st.markdown("**Despesas Operacionais**")
-            dre_adm = st.text_input("Despesas Administrativas", placeholder="Ex: 420.000", key="dre_adm")
-            dre_sal = st.text_input("Salários e encargos administrativo", placeholder="Ex: 312.000", key="dre_sal")
-            dre_com = st.text_input("Despesas Comerciais", placeholder="Ex: 124.000", key="dre_com")
-            dre_fin = st.text_input("Despesas Financeiras (juros, IOF)", placeholder="Ex: 248.000", key="dre_fin")
-            dre_dep = st.text_input("Depreciação", placeholder="Ex: 186.000", key="dre_dep")
-            st.markdown("**Resultado e Pessoal**")
-            dre_res = st.text_input("Resultado antes do IR/CSLL", placeholder="Ex: 281.700", key="dre_res")
-            dre_ir  = st.text_input("IR e CSLL pagos", placeholder="Ex: 123.008", key="dre_ir")
-            dre_ll  = st.text_input("Lucro Líquido", placeholder="Ex: 158.692", key="dre_ll")
-            dre_func = st.text_input("Funcionários CLT", placeholder="Ex: 42", key="dre_func")
-            dre_folha= st.text_input("Folha mensal", placeholder="Ex: 186.000", key="dre_folha")
+    if st.session_state.resultado:
+        st.divider()
+        nivel, vm, am = calcular_nivel_risco(st.session_state.resultado)
+        st.markdown(badge_risco(nivel, vm, am), unsafe_allow_html=True)
+        st.markdown('<div class="resultado-titulo">Análise MAGUS Fiscal</div>', unsafe_allow_html=True)
+        st.markdown(st.session_state.resultado)
+        st.divider()
 
-        campos_form = [dre_rb, dre_rl, dre_lb, dre_ll, dre_mat, dre_mo, dre_res]
-        if any(campos_form):
-            linhas = ["--- DADOS FINANCEIROS (DRE — Formulário) ---"]
-            for label, val in [
-                ("Receita Bruta", dre_rb), ("Deduções", dre_ded), ("Receita Líquida", dre_rl),
-                ("Materiais/Insumos", dre_mat), ("Mão de obra direta", dre_mo),
-                ("Subcontratados", dre_ter), ("Total de Custos", dre_ct), ("Lucro Bruto", dre_lb),
-                ("Desp. Administrativas", dre_adm), ("Salários Adm.", dre_sal),
-                ("Desp. Comerciais", dre_com), ("Desp. Financeiras", dre_fin),
-                ("Depreciação", dre_dep), ("Result. antes IR/CSLL", dre_res),
-                ("IR e CSLL pagos", dre_ir), ("Lucro Líquido", dre_ll),
-                ("Funcionários CLT", dre_func), ("Folha mensal", dre_folha),
-            ]:
-                if val: linhas.append(f"{label}: R$ {val}" if label != "Funcionários CLT" else f"Funcionários CLT: {val}")
-            dre_texto = "\n".join(linhas)
-            st.markdown('<div class="arquivo-ok">✓ Formulário preenchido — dados prontos para análise.</div>', unsafe_allow_html=True)
+        c_dl, c_lim = st.columns([3, 1])
+        with c_dl:
+            pdf_bytes = gerar_pdf(st.session_state.resultado, st.session_state.analise_dados, st.session_state.analise_tipo)
+            nome = f"MAGUS_Fiscal_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            st.download_button("📄  Baixar Relatório em PDF", data=pdf_bytes, file_name=nome, mime="application/pdf")
+        with c_lim:
+            if st.button("✕  Limpar análise"):
+                st.session_state.resultado = None
+                st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MÓDULO TRANSIÇÃO BRASIL → EUA
+# ══════════════════════════════════════════════════════════════════════════════
+
+else:
+
+    st.markdown("""
+    <div class="banner-transicao">
+      <div class="banner-transicao-titulo">🇧🇷🇺🇸  MÓDULO — SAÍDA FISCAL BRASIL → EUA</div>
+      <div class="banner-transicao-texto">
+        Triagem fiscal para brasileiros residindo ou em transição para os Estados Unidos.
+        Analisa residência fiscal, carnê-leão, LLC sob Lei 14.754/2023, CBE/DCBE, empresa brasileira no Simples/MEI
+        e gera memo em inglês para o contador americano.
+        Os resultados são estimativas educacionais — casos complexos exigem revisão profissional.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-title">Dados para Análise</div>', unsafe_allow_html=True)
+    st.markdown("")
+
+    dados_t, campos_ok_t = _form_transicao()
 
     st.divider()
 
-# ── Opções Avançadas ──────────────────────────────────────────────────────────
+    if not campos_ok_t:
+        st.info("Preencha pelo menos: País de residência, Data de saída do Brasil e Dúvida/Objetivo.")
 
-previsao_texto = None
+    btn_t = st.button("Analisar", type="primary", disabled=not campos_ok_t, key="btn_analisar_transicao")
 
-if cfg["avancado"]:
-    with st.expander("Opções Avançadas — Previsão de Faturamento e Simulação de Regime"):
-        st.caption("Informe projeções para que o MAGUS compare regimes e simule cenários.")
-        ca, cb = st.columns(2)
-        with ca:
-            fat1 = st.text_input("Faturamento Projetado (próximo ano)", placeholder="Ex: R$ 4 milhões")
-            fat2 = st.text_input("Faturamento Projetado (em 2 anos)", placeholder="Ex: R$ 8 milhões")
-        with cb:
-            nfunc = st.text_input("Número de Funcionários", placeholder="Ex: 12")
-            folha = st.text_input("Folha de Pagamento Mensal", placeholder="Ex: R$ 80 mil")
-        obs = st.text_area("Observações adicionais", placeholder="Ex: Pretendemos abrir filial em outro estado...", height=70)
-        if fat1 or fat2:
-            partes = []
-            if fat1:  partes.append(f"Faturamento projetado próximo ano: {fat1}")
-            if fat2:  partes.append(f"Faturamento projetado 2 anos: {fat2}")
-            if nfunc: partes.append(f"Número de funcionários: {nfunc}")
-            if folha: partes.append(f"Folha mensal: {folha}")
-            if obs:   partes.append(f"Observações: {obs}")
-            previsao_texto = "\n".join(partes)
-    st.divider()
+    if btn_t:
+        with st.spinner("Analisando situação fiscal bilateral... Isso pode levar alguns segundos."):
+            try:
+                resultado_t = analisar(dados_t, "transicao", modulo="transicao")
+                st.session_state.resultado    = resultado_t
+                st.session_state.analise_dados = dados_t
+                st.session_state.analise_tipo  = "transicao"
+            except Exception as e:
+                st.error(f"Erro ao conectar com o motor de IA: {e}")
 
-# ── Botão de análise ──────────────────────────────────────────────────────────
+    if st.session_state.resultado and st.session_state.analise_tipo == "transicao":
+        st.divider()
+        nivel, vm, am = calcular_nivel_risco(st.session_state.resultado)
+        st.markdown(badge_risco(nivel, vm, am), unsafe_allow_html=True)
+        st.markdown('<div class="resultado-titulo">Análise MAGUS Fiscal — Saída Fiscal Brasil → EUA</div>', unsafe_allow_html=True)
+        st.markdown(st.session_state.resultado)
+        st.divider()
 
-if not campos_ok:
-    st.info("Preencha os campos obrigatórios para iniciar a análise.")
-
-btn = st.button("Analisar", type="primary", disabled=not campos_ok)
-
-if btn:
-    with st.spinner("Analisando... Isso pode levar alguns segundos."):
-        try:
-            resultado = analisar(dados, tipo_diagnostico, dre_texto, previsao_texto)
-            st.session_state.resultado    = resultado
-            st.session_state.analise_dados = dados
-            st.session_state.analise_tipo  = tipo_diagnostico
-        except Exception as e:
-            st.error(f"Erro ao conectar com o motor de IA: {e}")
-
-# ── Resultado ─────────────────────────────────────────────────────────────────
-
-if st.session_state.resultado:
-    st.divider()
-    nivel, vm, am = calcular_nivel_risco(st.session_state.resultado)
-    st.markdown(badge_risco(nivel, vm, am), unsafe_allow_html=True)
-    st.markdown('<div class="resultado-titulo">Análise MAGUS Fiscal</div>', unsafe_allow_html=True)
-    st.markdown(st.session_state.resultado)
-    st.divider()
-
-    c_dl, c_lim = st.columns([3, 1])
-    with c_dl:
-        pdf_bytes = gerar_pdf(st.session_state.resultado, st.session_state.analise_dados, st.session_state.analise_tipo)
-        nome = f"MAGUS_Fiscal_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-        st.download_button("📄  Baixar Relatório em PDF", data=pdf_bytes, file_name=nome, mime="application/pdf")
-    with c_lim:
-        if st.button("✕  Limpar análise"):
-            st.session_state.resultado = None
-            st.rerun()
+        c_dl, c_lim = st.columns([3, 1])
+        with c_dl:
+            pdf_bytes = gerar_pdf(st.session_state.resultado, st.session_state.analise_dados, "transicao")
+            nome = f"MAGUS_Saida_Fiscal_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            st.download_button("📄  Baixar Relatório em PDF", data=pdf_bytes, file_name=nome, mime="application/pdf")
+        with c_lim:
+            if st.button("✕  Limpar análise", key="limpar_transicao"):
+                st.session_state.resultado = None
+                st.rerun()
 
 st.divider()
 st.markdown('<div class="magus-footer">MAGUS Fiscal — Protótipo 0.1 &nbsp;|&nbsp; Use apenas dados fictícios ou anonimizados</div>', unsafe_allow_html=True)
