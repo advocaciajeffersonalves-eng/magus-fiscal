@@ -791,7 +791,7 @@ st.markdown("""
   </svg>
   <div>
     <div style='color:#c8973a; font-size:1.8rem; font-weight:700; letter-spacing:0.05em; line-height:1.1;'>MAGUS Fiscal</div>
-    <div style='color:#8a8f9e; font-size:0.9rem; margin-top:0.25rem;'>Analista Tributário Assistido por IA · Protótipo 0</div>
+    <div style='color:#8a8f9e; font-size:0.9rem; margin-top:0.25rem;'>Analista Tributário Assistido por IA · Protótipo 0.1</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -951,4 +951,4 @@ if st.session_state.resultado:
             st.rerun()
 
 st.divider()
-st.markdown('<div class="magus-footer">MAGUS Fiscal — Protótipo 0 &nbsp;|&nbsp; Use apenas dados fictícios ou anonimizados</div>', unsafe_allow_html=True)
+st.markdown('<div class="magus-footer">MAGUS Fiscal — Protótipo 0.1 &nbsp;|&nbsp; Use apenas dados fictícios ou anonimizados</div>', unsafe_allow_html=True)
