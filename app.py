@@ -1,5 +1,7 @@
 import os
 import re
+import ssl
+import smtplib
 import anthropic
 import streamlit as st
 import pandas as pd
@@ -7,6 +9,8 @@ import pdfplumber
 from fpdf import FPDF
 from datetime import datetime
 from dotenv import load_dotenv
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 load_dotenv()
 
@@ -1089,6 +1093,117 @@ def extrair_conteudo_arquivo(arq):
     return None
 
 
+# ── Captação de lead ─────────────────────────────────────────────────────────
+
+def enviar_lead(nome_contato, contato, nivel, resultado, dados, tipo):
+    gmail_user = os.getenv("GMAIL_USER", "")
+    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "")
+    if not gmail_user or not gmail_pass:
+        raise ValueError("Credenciais GMAIL_USER / GMAIL_APP_PASSWORD não configuradas.")
+
+    dados_str = "\n".join(f"  {k}: {v}" for k, v in dados.items() if v)
+    relatorio_resumo = resultado[:3500] + ("..." if len(resultado) > 3500 else "")
+
+    corpo = f"""MAGUS FISCAL — SOLICITAÇÃO DE CONTATO ESPECIALISTA
+{'=' * 58}
+
+INTERESSADO
+  Nome / Identificação : {nome_contato}
+  Contato              : {contato}
+  Data/Hora            : {datetime.now().strftime('%d/%m/%Y %H:%M')}
+
+DIAGNÓSTICO
+  Nível de risco       : {nivel}
+  Tipo de análise      : {tipo}
+
+DADOS INFORMADOS PELO USUÁRIO
+{dados_str}
+
+RELATÓRIO GERADO (primeiros 3.500 caracteres)
+{'=' * 58}
+{relatorio_resumo}
+
+{'=' * 58}
+Gerado automaticamente pelo MAGUS Fiscal — Protótipo 0.1
+"""
+    msg = MIMEMultipart()
+    msg["From"]    = gmail_user
+    msg["To"]      = "juridico@magus.ia.br"
+    msg["Subject"] = f"[MAGUS Fiscal] Lead {nivel} — {tipo[:45]}"
+    msg.attach(MIMEText(corpo, "plain", "utf-8"))
+
+    ctx = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as srv:
+        srv.login(gmail_user, gmail_pass)
+        srv.sendmail(gmail_user, "juridico@magus.ia.br", msg.as_string())
+
+
+def _card_lead(nivel, dados, resultado, tipo, key_suffix=""):
+    """Mostra card de captação de lead quando risco é crítico."""
+    if nivel not in ("ALTO", "MÉDIO-ALTO"):
+        return
+
+    step = st.session_state.lead_step
+
+    if step == "skip":
+        return
+
+    if step == "enviado":
+        st.markdown("""
+        <div class="lead-ok">
+          ✓ &nbsp;<strong>Solicitação enviada com sucesso.</strong>
+          &nbsp; Nossa equipe entrará em contato em breve.
+        </div>
+        """, unsafe_allow_html=True)
+        return
+
+    cor = "#ff4444" if nivel == "ALTO" else "#f0a020"
+    st.markdown(f"""
+    <div class="lead-card">
+      <div class="lead-card-header" style="border-left:3px solid {cor}; padding-left:0.9rem;">
+        <span style="color:{cor}; font-size:1rem;">⚠</span>
+        &nbsp; <span style="color:{cor};">Risco {nivel} identificado</span> — um especialista pode ajudar
+      </div>
+      <div class="lead-card-body">
+        O diagnóstico aponta pontos críticos que podem gerar <strong>autuações fiscais, passivos
+        tributários ou oportunidades não aproveitadas</strong>. Um especialista MAGUS pode analisar
+        o caso em profundidade e propor um plano de ação concreto para regularizar e otimizar
+        a situação fiscal.<br><br>
+        <strong>Deseja que um especialista entre em contato para auxiliar na resolução?</strong>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if step == "none":
+        lc1, lc2, _ = st.columns([2.2, 1.8, 3])
+        with lc1:
+            if st.button("✉  Sim, quero ser contatado", key=f"lead_sim{key_suffix}", type="primary"):
+                st.session_state.lead_step = "form"
+                st.rerun()
+        with lc2:
+            if st.button("Não, obrigado", key=f"lead_nao{key_suffix}"):
+                st.session_state.lead_step = "skip"
+                st.rerun()
+
+    if step == "form":
+        with st.form(f"form_lead{key_suffix}"):
+            fn = st.text_input("Seu nome ou como prefere ser identificado",
+                               placeholder="Ex: Dr. João Silva, Empresa ABC Ltda...")
+            fc = st.text_input("Melhor forma de contato (telefone ou e-mail)",
+                               placeholder="Ex: (62) 99999-9999  ou  contato@empresa.com.br")
+            sub = st.form_submit_button("Enviar solicitação", type="primary")
+            if sub:
+                if not fn or not fc:
+                    st.warning("Informe seu nome e contato para enviar a solicitação.")
+                else:
+                    try:
+                        enviar_lead(fn, fc, nivel, resultado, dados, tipo)
+                        st.session_state.lead_step = "enviado"
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao enviar: {e}")
+
+
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
 CSS = """
@@ -1358,6 +1473,35 @@ hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
 .element-container .stMarkdown td { color: #b8bcd0 !important; font-size: 0.88rem !important; padding: 0.55rem 0.8rem !important; border: 1px solid #141828 !important; }
 .element-container .stMarkdown tr:hover td { background: rgba(200,151,58,0.04) !important; }
 
+/* ── Lead card ──────────────────────────────────────── */
+.lead-card {
+    background: linear-gradient(135deg, rgba(10,14,28,0.97), rgba(8,10,22,0.98));
+    border: 1px solid rgba(200,151,58,0.22);
+    border-radius: 12px;
+    padding: 1.3rem 1.6rem 1.4rem;
+    margin: 1.4rem 0 0.8rem;
+}
+.lead-card-header {
+    font-size: 0.92rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.01em;
+}
+.lead-card-body {
+    color: #7a8098;
+    font-size: 0.87rem;
+    line-height: 1.7;
+}
+.lead-ok {
+    background: linear-gradient(135deg, rgba(8,22,14,0.95), rgba(5,16,10,0.98));
+    border: 1px solid rgba(42,130,65,0.6);
+    border-radius: 10px;
+    padding: 1rem 1.4rem;
+    color: #48c870;
+    font-size: 0.88rem;
+    margin: 1rem 0;
+}
+
 /* ── Sidebar ────────────────────────────────────────── */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #070a16 0%, #05080f 100%) !important;
@@ -1405,7 +1549,7 @@ hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
 
 # ── Session state ─────────────────────────────────────────────────────────────
 
-for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), ("modulo", "brasil")]:
+for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), ("modulo", "brasil"), ("lead_step", "none")]:
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -1628,6 +1772,7 @@ if st.session_state.modulo == "brasil":
         st.divider()
         nivel, vm, am = calcular_nivel_risco(st.session_state.resultado)
         st.markdown(badge_risco(nivel, vm, am), unsafe_allow_html=True)
+        _card_lead(nivel, st.session_state.analise_dados, st.session_state.resultado, st.session_state.analise_tipo, key_suffix="_br")
         st.markdown('<div class="resultado-titulo">Análise MAGUS Fiscal</div>', unsafe_allow_html=True)
         st.markdown(st.session_state.resultado)
         st.divider()
@@ -1640,6 +1785,7 @@ if st.session_state.modulo == "brasil":
         with c_lim:
             if st.button("✕  Limpar análise"):
                 st.session_state.resultado = None
+                st.session_state.lead_step = "none"
                 st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1686,6 +1832,7 @@ else:
         st.divider()
         nivel, vm, am = calcular_nivel_risco(st.session_state.resultado)
         st.markdown(badge_risco(nivel, vm, am), unsafe_allow_html=True)
+        _card_lead(nivel, st.session_state.analise_dados, st.session_state.resultado, "Saída Fiscal Brasil → EUA", key_suffix="_tr")
         st.markdown('<div class="resultado-titulo">Análise MAGUS Fiscal — Saída Fiscal Brasil → EUA</div>', unsafe_allow_html=True)
         st.markdown(st.session_state.resultado)
         st.divider()
@@ -1698,6 +1845,7 @@ else:
         with c_lim:
             if st.button("✕  Limpar análise", key="limpar_transicao"):
                 st.session_state.resultado = None
+                st.session_state.lead_step = "none"
                 st.rerun()
 
 st.divider()
