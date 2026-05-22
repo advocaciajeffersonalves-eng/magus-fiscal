@@ -933,23 +933,26 @@ def calcular_nivel_risco(texto):
 
 def badge_risco(nivel, vermelhos, amarelos):
     paleta = {
-        "ALTO":       ("#2a0a0a", "#8b1c1c", "#f05252", "#fca5a5"),
-        "MÉDIO-ALTO": ("#1c1203", "#7c5010", "#e3a008", "#fcd34d"),
-        "MÉDIO":      ("#1c1203", "#7c5010", "#d4ac0d", "#fde68a"),
-        "BAIXO":      ("#0a1c0d", "#1a5c2a", "#31c45d", "#86efac"),
+        "ALTO":       ("rgba(42,8,8,0.95)",  "rgba(180,30,30,0.5)",  "#ff4444", "#ff8080", "rgba(180,30,30,0.15)"),
+        "MÉDIO-ALTO": ("rgba(30,16,2,0.95)", "rgba(180,110,10,0.5)", "#f0a020", "#f8cc70", "rgba(180,110,10,0.12)"),
+        "MÉDIO":      ("rgba(28,22,2,0.95)", "rgba(160,130,10,0.5)", "#d4b020", "#f0d060", "rgba(160,130,10,0.10)"),
+        "BAIXO":      ("rgba(5,22,10,0.95)", "rgba(30,110,50,0.5)",  "#28c45a", "#70e090", "rgba(30,110,50,0.12)"),
     }
-    emojis = {"ALTO": "🔴", "MÉDIO-ALTO": "🟠", "MÉDIO": "🟡", "BAIXO": "🟢"}
-    bg, border, cor_nivel, cor_label = paleta.get(nivel, paleta["MÉDIO"])
-    emoji = emojis.get(nivel, "🟡")
-    contagem = f"{vermelhos} risco(s) alto(s) &nbsp;·&nbsp; {amarelos} alerta(s) médio(s)"
+    icones = {"ALTO": "⬤", "MÉDIO-ALTO": "⬤", "MÉDIO": "⬤", "BAIXO": "⬤"}
+    cores_icone = {"ALTO": "#ff4444", "MÉDIO-ALTO": "#f0a020", "MÉDIO": "#d4b020", "BAIXO": "#28c45a"}
+    bg, border, cor_nivel, cor_label, glow = paleta.get(nivel, paleta["MÉDIO"])
+    icone_cor = cores_icone.get(nivel, "#d4b020")
+    contagem = f"{vermelhos} crítico(s) &nbsp;·&nbsp; {amarelos} alerta(s)"
     return (
-        f'<div style="background:{bg}; border:1.5px solid {border}; border-radius:10px;'
-        f' padding:1rem 1.5rem; margin:0.5rem 0 1.5rem; display:flex; align-items:center; gap:1.2rem;">'
-        f'<span style="font-size:2.2rem; line-height:1;">{emoji}</span>'
-        f'<div><div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.12em;'
-        f' font-weight:700; color:{cor_label}; margin-bottom:0.15rem;">Nível de Risco Fiscal Identificado</div>'
-        f'<div style="font-size:1.45rem; font-weight:800; color:{cor_nivel}; line-height:1.1;">{nivel}</div></div>'
-        f'<div style="margin-left:auto; text-align:right; font-size:0.75rem; color:{border}; opacity:0.9;">{contagem}</div>'
+        f'<div style="background:{bg}; border:1px solid {border}; border-radius:12px;'
+        f' padding:1.1rem 1.6rem; margin:0.75rem 0 1.75rem; display:flex; align-items:center; gap:1.4rem;'
+        f' box-shadow:0 4px 24px {glow}, inset 0 1px 0 rgba(255,255,255,0.04);">'
+        f'<span style="font-size:1.6rem; line-height:1; color:{icone_cor}; filter:drop-shadow(0 0 8px {icone_cor});">{icones.get(nivel,"⬤")}</span>'
+        f'<div style="flex:1;">'
+        f'<div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.18em; font-weight:700; color:{cor_label}; margin-bottom:0.2rem; opacity:0.75;">Nível de Risco Fiscal Identificado</div>'
+        f'<div style="font-size:1.35rem; font-weight:900; color:{cor_nivel}; line-height:1.1; letter-spacing:0.04em;">{nivel}</div>'
+        f'</div>'
+        f'<div style="text-align:right; font-size:0.72rem; color:{cor_label}; opacity:0.6; line-height:1.7;">{contagem}</div>'
         f'</div>'
     )
 
@@ -1090,38 +1093,265 @@ def extrair_conteudo_arquivo(arq):
 
 CSS = """
 <style>
-    .stApp {
-        background-color: #0a0d14;
-        background-image:
-            linear-gradient(rgba(200,151,58,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(200,151,58,0.04) 1px, transparent 1px),
-            radial-gradient(ellipse at 20% 50%, rgba(200,151,58,0.06) 0%, transparent 60%),
-            radial-gradient(ellipse at 80% 20%, rgba(30,60,120,0.15) 0%, transparent 50%);
-        background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
-    }
-    .section-title { color:#c8973a; font-size:1rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.5rem; }
-    .stTextInput label, .stSelectbox label, .stTextArea label, .stFileUploader label { color:#c8c8c8 !important; font-size:0.9rem !important; font-weight:500 !important; }
-    .stTextInput input, .stTextArea textarea, .stNumberInput input { background-color:#141824 !important; border:1px solid #2d3348 !important; color:#e8e8e8 !important; border-radius:6px !important; }
-    .stTextInput input:focus, .stTextArea textarea:focus { border-color:#c8973a !important; box-shadow:0 0 0 1px #c8973a !important; }
-    .stSelectbox > div > div { background-color:#141824 !important; border:1px solid #2d3348 !important; color:#e8e8e8 !important; border-radius:6px !important; }
-    .stFileUploader > div { background-color:#141824 !important; border:1px dashed #2d3348 !important; border-radius:6px !important; }
-    .stFileUploader > div:hover { border-color:#c8973a !important; }
-    .stExpander { background-color:#141824 !important; border:1px solid #2d3348 !important; border-radius:6px !important; }
-    .stExpander summary { color:#c8973a !important; font-weight:600 !important; }
-    .stButton > button[kind="primary"] { background-color:#c8973a !important; color:#0a0d14 !important; font-weight:700 !important; font-size:1rem !important; border:none !important; padding:0.6rem 2rem !important; border-radius:6px !important; width:100%; letter-spacing:0.03em; }
-    .stButton > button[kind="primary"]:hover { background-color:#e0aa4a !important; }
-    .stButton > button[kind="secondary"] { background-color:#141824 !important; color:#8a8f9e !important; border:1px solid #2d3348 !important; font-weight:600 !important; font-size:0.9rem !important; border-radius:6px !important; width:100%; }
-    .stButton > button[kind="secondary"]:hover { border-color:#c8973a !important; color:#c8973a !important; background-color:#141824 !important; }
-    .stButton > button:disabled { opacity:0.4 !important; }
-    .resultado-titulo { color:#c8973a; font-size:1rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #2d3348; }
-    hr { border-color:#2d3348 !important; }
-    .stAlert { background-color:#141824 !important; border:1px solid #2d3348 !important; border-radius:6px !important; }
-    .magus-footer { color:#3d4357; font-size:0.75rem; text-align:center; margin-top:2rem; padding-top:1rem; border-top:1px solid #1a1f2e; }
-    .arquivo-ok { background-color:#0d1f12; border:1px solid #2a5c35; border-radius:6px; padding:0.5rem 0.8rem; color:#5cb87a; font-size:0.85rem; margin-top:0.3rem; }
-    .tipo-desc { color:#7a8099; font-size:0.82rem; margin-top:0.2rem; font-style:italic; }
-    .banner-transicao { background:#0a1420; border:1px solid #1a3a5c; border-radius:8px; padding:0.8rem 1.2rem; margin-bottom:1rem; }
-    .banner-transicao-titulo { color:#4a9eff; font-size:0.85rem; font-weight:600; margin-bottom:0.3rem; }
-    .banner-transicao-texto { color:#7a90a8; font-size:0.82rem; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── Base ─────────────────────────────────────────────── */
+html, body, [class*="css"], .stApp, .stApp * {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+.stApp {
+    background-color: #07090f;
+    background-image:
+        radial-gradient(ellipse at 12% 38%, rgba(200,151,58,0.08) 0%, transparent 52%),
+        radial-gradient(ellipse at 88% 12%, rgba(30,55,140,0.2) 0%, transparent 50%),
+        radial-gradient(ellipse at 55% 85%, rgba(12,22,65,0.35) 0%, transparent 55%),
+        linear-gradient(rgba(200,151,58,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,151,58,0.022) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 52px 52px, 52px 52px;
+}
+
+/* ── Section titles ─────────────────────────────────── */
+.section-title {
+    color: #c8973a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+.section-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 13px;
+    background: linear-gradient(to bottom, #e8b85a, #a06820);
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+/* ── Labels ─────────────────────────────────────────── */
+.stTextInput label, .stSelectbox label, .stTextArea label, .stFileUploader label {
+    color: #8890aa !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.025em !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* ── Inputs ─────────────────────────────────────────── */
+.stTextInput input, .stTextArea textarea, .stNumberInput input {
+    background-color: #0d1020 !important;
+    border: 1px solid #1e2338 !important;
+    color: #dde0ee !important;
+    border-radius: 8px !important;
+    font-size: 0.88rem !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+.stTextInput input:focus, .stTextArea textarea:focus {
+    border-color: #c8973a !important;
+    box-shadow: 0 0 0 3px rgba(200,151,58,0.12) !important;
+}
+.stTextInput input::placeholder, .stTextArea textarea::placeholder {
+    color: #323858 !important;
+    font-style: italic !important;
+}
+
+/* ── Selectbox ──────────────────────────────────────── */
+.stSelectbox > div > div {
+    background-color: #0d1020 !important;
+    border: 1px solid #1e2338 !important;
+    color: #dde0ee !important;
+    border-radius: 8px !important;
+    transition: border-color 0.2s !important;
+}
+.stSelectbox > div > div:hover { border-color: rgba(200,151,58,0.5) !important; }
+
+/* ── Primary button — Analisar ──────────────────────── */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #b8821a 0%, #d4973a 30%, #f0be60 60%, #c8973a 100%) !important;
+    background-size: 200% auto !important;
+    color: #07090f !important;
+    font-weight: 800 !important;
+    font-size: 0.9rem !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    border: none !important;
+    padding: 0.75rem 2rem !important;
+    border-radius: 8px !important;
+    width: 100%;
+    box-shadow: 0 4px 24px rgba(200,151,58,0.3), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    transition: background-position 0.5s ease, box-shadow 0.3s ease, transform 0.15s ease !important;
+}
+.stButton > button[kind="primary"]:hover {
+    background-position: right center !important;
+    box-shadow: 0 6px 32px rgba(200,151,58,0.5), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    transform: translateY(-1px) !important;
+}
+.stButton > button[kind="primary"]:active { transform: translateY(0) !important; }
+
+/* ── Secondary button — módulo selector ─────────────── */
+.stButton > button[kind="secondary"] {
+    background-color: #0d1020 !important;
+    color: #484e6a !important;
+    border: 1px solid #1e2338 !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important;
+    width: 100%;
+    transition: all 0.2s ease !important;
+    letter-spacing: 0.02em !important;
+}
+.stButton > button[kind="secondary"]:hover {
+    border-color: rgba(200,151,58,0.6) !important;
+    color: #c8973a !important;
+    background-color: rgba(200,151,58,0.06) !important;
+}
+.stButton > button:disabled { opacity: 0.3 !important; }
+
+/* ── Divider ────────────────────────────────────────── */
+hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
+
+/* ── Expander ───────────────────────────────────────── */
+.stExpander {
+    background-color: #0d1020 !important;
+    border: 1px solid #1e2338 !important;
+    border-radius: 10px !important;
+}
+.stExpander summary {
+    color: #c8973a !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    letter-spacing: 0.02em !important;
+}
+
+/* ── File uploader ──────────────────────────────────── */
+.stFileUploader > div {
+    background-color: #0d1020 !important;
+    border: 1px dashed #1e2338 !important;
+    border-radius: 10px !important;
+    transition: border-color 0.2s !important;
+}
+.stFileUploader > div:hover { border-color: rgba(200,151,58,0.5) !important; }
+
+/* ── Tabs ───────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: #0d1020 !important;
+    border-bottom: 1px solid #1e2338 !important;
+    gap: 0 !important;
+}
+.stTabs [data-baseweb="tab"] {
+    color: #484e6a !important;
+    font-size: 0.83rem !important;
+    font-weight: 500 !important;
+    padding: 0.6rem 1.2rem !important;
+    transition: color 0.2s !important;
+}
+.stTabs [aria-selected="true"] {
+    color: #c8973a !important;
+    border-bottom: 2px solid #c8973a !important;
+    background: transparent !important;
+}
+
+/* ── Alert ──────────────────────────────────────────── */
+.stAlert {
+    background-color: #0d1020 !important;
+    border: 1px solid #1e2338 !important;
+    border-radius: 8px !important;
+    font-size: 0.86rem !important;
+}
+
+/* ── Type description ───────────────────────────────── */
+.tipo-desc {
+    color: #484e6a;
+    font-size: 0.82rem;
+    margin-top: 0.3rem;
+    font-style: italic;
+    line-height: 1.55;
+}
+
+/* ── Result title ───────────────────────────────────── */
+.resultado-titulo {
+    color: #c8973a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid #141828;
+}
+
+/* ── File ok badge ──────────────────────────────────── */
+.arquivo-ok {
+    background: linear-gradient(135deg, rgba(13,31,18,0.9), rgba(8,22,12,0.9));
+    border: 1px solid rgba(42,92,53,0.8);
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    color: #52b86e;
+    font-size: 0.83rem;
+    margin-top: 0.5rem;
+}
+
+/* ── Footer ─────────────────────────────────────────── */
+.magus-footer {
+    color: #1e2235;
+    font-size: 0.7rem;
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #0f1220;
+    letter-spacing: 0.06em;
+}
+
+/* ── Transition banner ──────────────────────────────── */
+.banner-transicao {
+    background: linear-gradient(135deg, rgba(8,18,35,0.95), rgba(6,14,28,0.98));
+    border: 1px solid rgba(60,120,220,0.2);
+    border-radius: 12px;
+    padding: 1rem 1.4rem;
+    margin-bottom: 1.2rem;
+    position: relative;
+    overflow: hidden;
+}
+.banner-transicao::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #3a78dc, #6aafff, #3a78dc, transparent);
+}
+.banner-transicao-titulo {
+    color: #5a9fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.banner-transicao-texto {
+    color: #4a5e78;
+    font-size: 0.82rem;
+    line-height: 1.65;
+}
+
+/* ── Scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #07090f; }
+::-webkit-scrollbar-thumb { background: #1e2338; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #c8973a; }
+
+/* ── Markdown result content ────────────────────────── */
+.element-container .stMarkdown h1 { color: #c8973a !important; font-size: 1.3rem !important; font-weight: 800 !important; }
+.element-container .stMarkdown h2 { color: #a07830 !important; font-size: 1.05rem !important; font-weight: 700 !important; border-bottom: 1px solid #141828; padding-bottom: 0.4rem; }
+.element-container .stMarkdown p, .element-container .stMarkdown li { color: #b8bcd0 !important; font-size: 0.9rem !important; line-height: 1.7 !important; }
+.element-container .stMarkdown strong { color: #dde0ee !important; font-weight: 600 !important; }
+.element-container .stMarkdown table { border-collapse: collapse !important; width: 100% !important; }
+.element-container .stMarkdown th { background: #0d1020 !important; color: #c8973a !important; font-size: 0.8rem !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; padding: 0.6rem 0.8rem !important; border: 1px solid #1e2338 !important; }
+.element-container .stMarkdown td { color: #b8bcd0 !important; font-size: 0.88rem !important; padding: 0.55rem 0.8rem !important; border: 1px solid #141828 !important; }
+.element-container .stMarkdown tr:hover td { background: rgba(200,151,58,0.04) !important; }
 </style>
 """
 
@@ -1137,19 +1367,35 @@ st.set_page_config(page_title="MAGUS Fiscal", page_icon="assets/favicon.png", la
 st.markdown(CSS, unsafe_allow_html=True)
 
 st.markdown("""
-<div style='display:flex; align-items:center; gap:1.2rem; padding:0.5rem 0 1rem 0;'>
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="68" height="68">
-    <g transform="translate(256,256)">
-      <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
-        fill="none" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
-      <line x1="160" y1="-22" x2="160" y2="22" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
-      <line x1="188" y1="-12" x2="188" y2="12" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
-    </g>
-  </svg>
-  <div>
-    <div style='color:#c8973a; font-size:1.8rem; font-weight:700; letter-spacing:0.05em; line-height:1.1;'>MAGUS Fiscal</div>
-    <div style='color:#8a8f9e; font-size:0.9rem; margin-top:0.25rem;'>Analista Tributário Assistido por IA · Protótipo 0.1</div>
+<div style='display:flex; align-items:center; gap:1.6rem; padding:1.2rem 0 1.6rem 0;'>
+
+  <!-- Logo com glow -->
+  <div style='position:relative; flex-shrink:0;'>
+    <div style='position:absolute; inset:-14px; background:radial-gradient(circle, rgba(200,151,58,0.18) 0%, transparent 68%); border-radius:50%; pointer-events:none;'></div>
+    <div style='background:linear-gradient(135deg, rgba(200,151,58,0.12), rgba(200,151,58,0.04)); border:1px solid rgba(200,151,58,0.2); border-radius:16px; padding:10px; display:flex; align-items:center; justify-content:center;'>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="58" height="58">
+        <defs>
+          <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <g transform="translate(256,256)" filter="url(#glow)">
+          <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
+            fill="none" stroke="#C9A14A" stroke-width="20" stroke-linecap="round"/>
+          <line x1="158" y1="-20" x2="158" y2="20" stroke="#C9A14A" stroke-width="20" stroke-linecap="round"/>
+          <line x1="184" y1="-11" x2="184" y2="11" stroke="#C9A14A" stroke-width="20" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
   </div>
+
+  <!-- Título -->
+  <div style='flex:1; min-width:0;'>
+    <div style='background:linear-gradient(135deg, #c8973a 0%, #f0c060 45%, #c88030 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-size:2.1rem; font-weight:900; letter-spacing:0.04em; line-height:1; font-family:Inter,sans-serif;'>MAGUS Fiscal</div>
+    <div style='color:#484e6a; font-size:0.82rem; margin-top:0.4rem; font-weight:400; letter-spacing:0.04em; font-family:Inter,sans-serif;'>Analista Tributário Assistido por Inteligência Artificial</div>
+  </div>
+
+  <!-- Badge versão -->
+  <div style='flex-shrink:0; background:rgba(200,151,58,0.07); border:1px solid rgba(200,151,58,0.18); border-radius:20px; padding:0.28rem 0.85rem; color:#a07830; font-size:0.65rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; font-family:Inter,sans-serif;'>PROTÓTIPO 0.1</div>
+
 </div>
 """, unsafe_allow_html=True)
 
@@ -1336,12 +1582,12 @@ else:
 
     st.markdown("""
     <div class="banner-transicao">
-      <div class="banner-transicao-titulo">🇧🇷🇺🇸  MÓDULO — SAÍDA FISCAL BRASIL → EUA</div>
+      <div class="banner-transicao-titulo">🇧🇷 🇺🇸 &nbsp; Módulo — Saída Fiscal Brasil → EUA</div>
       <div class="banner-transicao-texto">
-        Triagem fiscal para brasileiros residindo ou em transição para os Estados Unidos.
-        Analisa residência fiscal, carnê-leão, LLC sob Lei 14.754/2023, CBE/DCBE, empresa brasileira no Simples/MEI
-        e gera memo em inglês para o contador americano.
-        Os resultados são estimativas educacionais — casos complexos exigem revisão profissional.
+        Triagem fiscal especializada para brasileiros residindo ou em transição para os Estados Unidos.
+        Analisa <strong style="color:#5a80a8;">residência fiscal</strong>, <strong style="color:#5a80a8;">carnê-leão</strong>, <strong style="color:#5a80a8;">LLC sob Lei 14.754/2023</strong>, <strong style="color:#5a80a8;">CBE/DCBE</strong>, empresa no Simples/MEI
+        e gera <strong style="color:#5a80a8;">Memo em inglês para o contador americano</strong>.
+        &nbsp;·&nbsp; Os resultados são estimativas educacionais — casos complexos exigem revisão profissional.
       </div>
     </div>
     """, unsafe_allow_html=True)
