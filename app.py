@@ -1095,9 +1095,14 @@ CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-/* ── Base ─────────────────────────────────────────────── */
-html, body, [class*="css"], .stApp, .stApp * {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+/* ── Inter font — aplicar apenas em texto, nunca em ícones ── */
+.stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
+.stApp label, .stApp div[data-testid="stMarkdownContainer"],
+.stApp div[data-testid="stText"], .stApp .stMarkdown,
+.stApp [data-baseweb="select"] span,
+.stApp [data-baseweb="input"] input,
+.stApp [data-baseweb="textarea"] textarea {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 .stApp {
     background-color: #07090f;
@@ -1352,6 +1357,49 @@ hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
 .element-container .stMarkdown th { background: #0d1020 !important; color: #c8973a !important; font-size: 0.8rem !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; padding: 0.6rem 0.8rem !important; border: 1px solid #1e2338 !important; }
 .element-container .stMarkdown td { color: #b8bcd0 !important; font-size: 0.88rem !important; padding: 0.55rem 0.8rem !important; border: 1px solid #141828 !important; }
 .element-container .stMarkdown tr:hover td { background: rgba(200,151,58,0.04) !important; }
+
+/* ── Sidebar ────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #070a16 0%, #05080f 100%) !important;
+    border-right: 1px solid rgba(200,151,58,0.10) !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    padding-top: 0 !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="secondary"] {
+    background-color: transparent !important;
+    border: 1px solid #1a1f35 !important;
+    color: #484e6a !important;
+    font-size: 0.82rem !important;
+    padding: 0.55rem 0.9rem !important;
+    margin-bottom: 0.3rem !important;
+    text-align: left !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {
+    border-color: rgba(200,151,58,0.45) !important;
+    color: #c8973a !important;
+    background-color: rgba(200,151,58,0.06) !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #9a6810 0%, #c8973a 50%, #b07828 100%) !important;
+    color: #07090f !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    border: none !important;
+    padding: 0.55rem 0.9rem !important;
+    margin-bottom: 0.3rem !important;
+    box-shadow: 0 2px 12px rgba(200,151,58,0.25) !important;
+    text-align: left !important;
+}
+.sidebar-label {
+    color: #2d3350;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin: 1.1rem 0 0.6rem;
+    padding-left: 0.1rem;
+}
 </style>
 """
 
@@ -1366,56 +1414,44 @@ for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), (
 st.set_page_config(page_title="MAGUS Fiscal", page_icon="assets/favicon.png", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
 
-st.markdown("""
-<div style='display:flex; align-items:center; gap:1.6rem; padding:1.2rem 0 1.6rem 0;'>
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 
-  <!-- Logo com glow -->
-  <div style='position:relative; flex-shrink:0;'>
-    <div style='position:absolute; inset:-14px; background:radial-gradient(circle, rgba(200,151,58,0.18) 0%, transparent 68%); border-radius:50%; pointer-events:none;'></div>
-    <div style='background:linear-gradient(135deg, rgba(200,151,58,0.12), rgba(200,151,58,0.04)); border:1px solid rgba(200,151,58,0.2); border-radius:16px; padding:10px; display:flex; align-items:center; justify-content:center;'>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="58" height="58">
-        <defs>
-          <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <g transform="translate(256,256)" filter="url(#glow)">
-          <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
-            fill="none" stroke="#C9A14A" stroke-width="20" stroke-linecap="round"/>
-          <line x1="158" y1="-20" x2="158" y2="20" stroke="#C9A14A" stroke-width="20" stroke-linecap="round"/>
-          <line x1="184" y1="-11" x2="184" y2="11" stroke="#C9A14A" stroke-width="20" stroke-linecap="round"/>
-        </g>
-      </svg>
-    </div>
-  </div>
-
-  <!-- Título -->
-  <div style='flex:1; min-width:0;'>
-    <div style='background:linear-gradient(135deg, #c8973a 0%, #f0c060 45%, #c88030 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-size:2.1rem; font-weight:900; letter-spacing:0.04em; line-height:1; font-family:Inter,sans-serif;'>MAGUS Fiscal</div>
-    <div style='color:#484e6a; font-size:0.82rem; margin-top:0.4rem; font-weight:400; letter-spacing:0.04em; font-family:Inter,sans-serif;'>Analista Tributário Assistido por Inteligência Artificial</div>
-  </div>
-
-  <!-- Badge versão -->
-  <div style='flex-shrink:0; background:rgba(200,151,58,0.07); border:1px solid rgba(200,151,58,0.18); border-radius:20px; padding:0.28rem 0.85rem; color:#a07830; font-size:0.65rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; font-family:Inter,sans-serif;'>PROTÓTIPO 0.1</div>
-
+with st.sidebar:
+    st.markdown("""
+<div style="padding:2rem 0.5rem 1.4rem; text-align:center; border-bottom:1px solid rgba(200,151,58,0.09); margin-bottom:0.2rem;">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="88" height="88" style="display:block;margin:0 auto 1.1rem;filter:drop-shadow(0 0 14px rgba(200,151,58,0.45));">
+    <g transform="translate(256,256)">
+      <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
+        fill="none" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
+      <line x1="158" y1="-20" x2="158" y2="20" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
+      <line x1="184" y1="-11" x2="184" y2="11" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
+    </g>
+  </svg>
+  <div style="background:linear-gradient(135deg,#c8973a 0%,#f0c060 45%,#c88030 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.6rem;font-weight:900;letter-spacing:0.06em;line-height:1;">MAGUS Fiscal</div>
+  <div style="color:#35405a;font-size:0.71rem;margin-top:0.5rem;letter-spacing:0.05em;line-height:1.5;">Analista Tributário<br>Assistido por IA</div>
+  <div style="display:inline-block;margin-top:1rem;background:rgba(200,151,58,0.06);border:1px solid rgba(200,151,58,0.15);border-radius:20px;padding:0.22rem 0.8rem;color:#6a4e18;font-size:0.58rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;">PROTÓTIPO 0.1</div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Seletor de módulo ──────────────────────────────────────────────────────────
-
-mod_c1, mod_c2, mod_c3 = st.columns([1.5, 2.2, 4])
-with mod_c1:
+    st.markdown('<div class="sidebar-label">Módulo</div>', unsafe_allow_html=True)
     btn_brasil = st.button(
         "🇧🇷  Módulo Brasil",
         key="btn_mod_brasil",
         type="primary" if st.session_state.modulo == "brasil" else "secondary",
         use_container_width=True
     )
-with mod_c2:
     btn_transicao = st.button(
         "🇧🇷🇺🇸  Transição Brasil → EUA",
         key="btn_mod_transicao",
         type="primary" if st.session_state.modulo == "transicao" else "secondary",
         use_container_width=True
     )
+
+    st.markdown("""
+<div style="position:fixed;bottom:1.2rem;left:0;width:var(--sidebar-width,260px);text-align:center;color:#1a1f35;font-size:0.65rem;letter-spacing:0.06em;">
+  MAGUS.IA &nbsp;·&nbsp; © 2026<br>Use apenas dados fictícios
+</div>
+""", unsafe_allow_html=True)
 
 if btn_brasil and st.session_state.modulo != "brasil":
     st.session_state.modulo = "brasil"
@@ -1425,8 +1461,6 @@ if btn_transicao and st.session_state.modulo != "transicao":
     st.session_state.modulo = "transicao"
     st.session_state.resultado = None
     st.rerun()
-
-st.divider()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO BRASIL
