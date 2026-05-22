@@ -1419,35 +1419,46 @@ st.markdown(CSS, unsafe_allow_html=True)
 with st.sidebar:
     st.markdown("""
 <style>
-@keyframes magus-pulse {
-  0%   { filter: drop-shadow(0 0 10px rgba(200,151,58,0.35)) drop-shadow(0 0 24px rgba(200,151,58,0.10)); transform: scale(1) rotate(0deg); }
-  25%  { filter: drop-shadow(0 0 22px rgba(200,151,58,0.70)) drop-shadow(0 0 48px rgba(200,151,58,0.25)); transform: scale(1.04) rotate(1deg); }
-  50%  { filter: drop-shadow(0 0 32px rgba(200,151,58,0.90)) drop-shadow(0 0 64px rgba(200,151,58,0.35)); transform: scale(1.07) rotate(0deg); }
-  75%  { filter: drop-shadow(0 0 22px rgba(200,151,58,0.70)) drop-shadow(0 0 48px rgba(200,151,58,0.25)); transform: scale(1.04) rotate(-1deg); }
-  100% { filter: drop-shadow(0 0 10px rgba(200,151,58,0.35)) drop-shadow(0 0 24px rgba(200,151,58,0.10)); transform: scale(1) rotate(0deg); }
+/* ── Runner percorrendo o traçado do infinito ── */
+@keyframes magus-run {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -1000; }
 }
-@keyframes magus-stroke {
-  0%   { stroke: #C9A14A; }
-  50%  { stroke: #f0d080; }
-  100% { stroke: #C9A14A; }
+/* ── Glow suave no SVG inteiro ── */
+@keyframes magus-glow {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(200,151,58,0.28)); }
+  50%     { filter: drop-shadow(0 0 20px rgba(200,151,58,0.62)); }
 }
-.magus-logo-wrap {
+/* ── Onda de sinal nas antenas ── */
+@keyframes magus-ant {
+  0%,100% { stroke: rgba(201,161,74,0.14); }
+  50%     { stroke: #fde488; }
+}
+.magus-svg {
   display: block;
   margin: 0 auto 1.2rem;
-  animation: magus-pulse 3.6s ease-in-out infinite;
-  transform-origin: center;
-}
-.magus-logo-wrap path, .magus-logo-wrap line {
-  animation: magus-stroke 3.6s ease-in-out infinite;
+  animation: magus-glow 3.4s ease-in-out infinite;
 }
 </style>
 <div style="padding:2rem 0.5rem 1.4rem; text-align:center; border-bottom:1px solid rgba(200,151,58,0.09); margin-bottom:0.2rem;">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="176" height="176" class="magus-logo-wrap">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="176" height="176" class="magus-svg">
     <g transform="translate(256,256)">
+      <!-- Trilha base do infinito — traço escuro permanente -->
       <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
-        fill="none" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
-      <line x1="158" y1="-20" x2="158" y2="20" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
-      <line x1="184" y1="-11" x2="184" y2="11" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"/>
+        fill="none" stroke="rgba(201,161,74,0.18)" stroke-width="22" stroke-linecap="round"/>
+      <!-- Luz correndo pelo traçado do infinito -->
+      <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
+        fill="none" stroke="#fde488" stroke-width="22" stroke-linecap="round"
+        pathLength="1000" stroke-dasharray="110 890"
+        style="animation: magus-run 2.8s linear infinite; filter: drop-shadow(0 0 7px #f0c84a);"/>
+      <!-- Antena interna — pulsa primeiro -->
+      <line x1="158" y1="-20" x2="158" y2="20"
+        stroke="#C9A14A" stroke-width="22" stroke-linecap="round"
+        style="animation: magus-ant 1.3s ease-in-out infinite; animation-delay: 0s;"/>
+      <!-- Antena externa — pulsa depois (onda saindo de dentro para fora) -->
+      <line x1="184" y1="-11" x2="184" y2="11"
+        stroke="#C9A14A" stroke-width="22" stroke-linecap="round"
+        style="animation: magus-ant 1.3s ease-in-out infinite; animation-delay: 0.42s;"/>
     </g>
   </svg>
   <div style="background:linear-gradient(135deg,#c8973a 0%,#f0c060 45%,#c88030 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.6rem;font-weight:900;letter-spacing:0.06em;line-height:1;">MAGUS Fiscal</div>
