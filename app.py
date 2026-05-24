@@ -14,6 +14,19 @@ from email.mime.multipart import MIMEMultipart
 
 load_dotenv()
 
+# ── Ponte local ↔ Streamlit Cloud ────────────────────────────────────────────
+# Local: lê do .env via load_dotenv()
+# Streamlit Cloud: lê do painel de Secrets e injeta no os.environ
+def _carregar_secrets():
+    try:
+        for k, v in st.secrets.items():
+            if k not in os.environ:
+                os.environ[k] = str(v)
+    except Exception:
+        pass  # local sem st.secrets configurado — usa .env normalmente
+
+_carregar_secrets()
+
 REGIMES = ["Simples Nacional", "Lucro Presumido", "Lucro Real", "MEI", "Não sei / A definir"]
 
 # ── Módulo Brasil — config por tipo ──────────────────────────────────────────
@@ -1549,9 +1562,12 @@ hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
 
 # ── Session state ─────────────────────────────────────────────────────────────
 
-for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), ("modulo", "brasil"), ("lead_step", "none")]:
+for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), ("modulo", "brasil"), ("lead_step", "none"),
+             ("jur_sel", "Brasil"), ("contrato_minuta", None)]:
     if k not in st.session_state:
         st.session_state[k] = v
+
+from contratos import render_contratos
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 
@@ -1624,6 +1640,12 @@ with st.sidebar:
         type="primary" if st.session_state.modulo == "transicao" else "secondary",
         use_container_width=True
     )
+    btn_contratos = st.button(
+        "📄  Gerador de Contratos",
+        key="btn_mod_contratos",
+        type="primary" if st.session_state.modulo == "contratos" else "secondary",
+        use_container_width=True
+    )
 
     st.markdown("""
 <div style="position:fixed;bottom:1.2rem;left:0;width:var(--sidebar-width,260px);text-align:center;color:#1a1f35;font-size:0.65rem;letter-spacing:0.06em;">
@@ -1639,6 +1661,18 @@ if btn_transicao and st.session_state.modulo != "transicao":
     st.session_state.modulo = "transicao"
     st.session_state.resultado = None
     st.rerun()
+if btn_contratos and st.session_state.modulo != "contratos":
+    st.session_state.modulo = "contratos"
+    st.session_state.resultado = None
+    st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MÓDULO CONTRATOS
+# ══════════════════════════════════════════════════════════════════════════════
+
+if st.session_state.modulo == "contratos":
+    render_contratos()
+    st.stop()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO BRASIL

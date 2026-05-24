@@ -1,8 +1,25 @@
+# Chaves de API — NUNCA versionar
 .env
+*.env
+
+# Ambiente virtual Python
 venv/
+.venv/
+env/
+
+# Cache Python
 __pycache__/
 *.pyc
 *.pyo
-.DS_Store
-teste.py
+*.pyd
 
+# Streamlit cache local
+.streamlit/secrets.toml
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Arquivos temporários e de teste
+teste_*.csv
+*.log
