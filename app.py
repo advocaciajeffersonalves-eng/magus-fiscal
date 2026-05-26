@@ -920,6 +920,12 @@ def formatar_descricao_transicao(dados):
 # ── API ───────────────────────────────────────────────────────────────────────
 
 def analisar(dados, tipo, dre_texto=None, previsao=None, modulo="brasil"):
+    # Verifica limite de sessão antes de chamar a API
+    limite = int(os.getenv("LIMITE_SESSAO", "20"))
+    if st.session_state.req_contador >= limite:
+        st.error("⚠️ Limite de consultas desta sessão atingido. Entre em contato com a equipe MAGUS.")
+        st.stop()
+
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     system = build_system_prompt(tipo, modulo)
     if modulo == "transicao":
@@ -934,6 +940,11 @@ def analisar(dados, tipo, dre_texto=None, previsao=None, modulo="brasil"):
         system=system,
         messages=[{"role": "user", "content": descricao}]
     )
+    # Incrementa contador de uso (sessão + banco)
+    st.session_state.req_contador += 1
+    uid = st.session_state.get("usuario", {}).get("id", 0)
+    if uid:
+        incrementar_uso(uid)
     return resposta.content[0].text
 
 
@@ -1515,6 +1526,46 @@ hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
     margin: 1rem 0;
 }
 
+/* ── Mobile responsive ──────────────────────────────── */
+@media (max-width: 768px) {
+    .block-container { padding: 1rem 0.8rem !important; }
+    .section-title { font-size: 0.9rem !important; }
+    [data-testid="stSidebar"] { min-width: 220px !important; }
+    .element-container .stMarkdown h1 { font-size: 1.1rem !important; }
+    .element-container .stMarkdown h2 { font-size: 0.95rem !important; }
+    .stButton > button { font-size: 0.82rem !important; padding: 0.5rem 0.8rem !important; }
+}
+@media (max-width: 480px) {
+    .block-container { padding: 0.6rem 0.5rem !important; }
+    [data-testid="stSidebar"] { min-width: 200px !important; }
+}
+
+/* ── Login page ─────────────────────────────────────── */
+.login-wrap { max-width: 420px; margin: 4rem auto 0; }
+.login-head { text-align: center; padding: 2.5rem 2rem 1.5rem; }
+.login-head h1 { color: #c8973a; font-size: 2rem; font-weight: 900; letter-spacing: .06em; margin: 0 0 .4rem; }
+.login-head p  { color: #35405a; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; margin: 0; }
+.login-box {
+    background: linear-gradient(135deg, rgba(10,14,28,.98), rgba(8,10,22,.99));
+    border: 1px solid rgba(200,151,58,.22);
+    border-radius: 14px;
+    padding: 2rem 2rem 1.8rem;
+    box-shadow: 0 8px 40px rgba(0,0,0,.55);
+}
+.login-nota { color: #2d3350; font-size: .72rem; text-align: center; margin-top: 1.2rem; }
+
+/* ── Uso da sessão (sidebar) ─────────────────────────── */
+.uso-box {
+    background: rgba(200,151,58,.05);
+    border: 1px solid rgba(200,151,58,.12);
+    border-radius: 8px;
+    padding: .55rem .9rem;
+    margin-top: .6rem;
+}
+.uso-label { color: #3a4060; font-size: .6rem; text-transform: uppercase; letter-spacing: .12em; }
+.uso-valor { color: #c8973a; font-size: .82rem; font-weight: 700; }
+.uso-alerta { color: #e06a30; font-size: .75rem; margin-top: .3rem; }
+
 /* ── Sidebar ────────────────────────────────────────── */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #070a16 0%, #05080f 100%) !important;
@@ -1563,16 +1614,57 @@ hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
 # ── Session state ─────────────────────────────────────────────────────────────
 
 for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), ("modulo", "brasil"), ("lead_step", "none"),
-             ("jur_sel", "Brasil"), ("contrato_minuta", None)]:
+             ("jur_sel", "Brasil"), ("contrato_minuta", None),
+             ("autenticado", False), ("usuario", {}), ("req_contador", 0)]:
     if k not in st.session_state:
         st.session_state[k] = v
 
 from contratos import render_contratos
+from auth import tela_login, painel_admin, incrementar_uso
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="MAGUS Fiscal", page_icon="assets/favicon.png", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
+
+# ── Redirect Streamlit Cloud → domínio oficial ────────────────────────────────
+# .env só existe na máquina local. No Streamlit Cloud, o arquivo não está presente.
+# Quando alguém acessa magus-fiscal.streamlit.app, redirecionamos para magusfiscal.com.br
+_ENV_LOCAL = os.path.isfile(os.path.join(os.path.dirname(__file__), ".env"))
+if not _ENV_LOCAL:
+    st.markdown("""
+    <style>
+    .redirect-box {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; min-height: 60vh; text-align: center;
+        gap: 1.5rem;
+    }
+    .redirect-logo { font-size: 3rem; }
+    .redirect-title { font-size: 1.8rem; font-weight: 700; color: #c8973a; }
+    .redirect-msg { font-size: 1.1rem; color: #aaa; }
+    .redirect-link a {
+        background: linear-gradient(135deg, #c8973a, #e6b85c);
+        color: #0a0a0f !important; padding: 0.8rem 2rem;
+        border-radius: 8px; font-weight: 700; text-decoration: none;
+        font-size: 1.1rem;
+    }
+    </style>
+    <meta http-equiv="refresh" content="3; url=https://magusfiscal.com.br">
+    <script>setTimeout(function(){window.location.replace('https://magusfiscal.com.br');},500);</script>
+    <div class="redirect-box">
+      <div class="redirect-logo">⚡</div>
+      <div class="redirect-title">MAGUS Fiscal</div>
+      <div class="redirect-msg">Redirecionando para o endereço oficial…</div>
+      <div class="redirect-link">
+        <a href="https://magusfiscal.com.br">→ magusfiscal.com.br</a>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+if not st.session_state.autenticado:
+    tela_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 
@@ -1647,6 +1739,34 @@ with st.sidebar:
         use_container_width=True
     )
 
+    # ── Info do usuário logado ────────────────────────────
+    usr = st.session_state.get("usuario", {})
+    nome_usr = usr.get("nome", "Usuário")
+    perfil_usr = usr.get("perfil", "")
+    req_total = usr.get("req_total", 0) + st.session_state.req_contador
+
+    st.markdown(f"""
+<div class="uso-box">
+  <div class="uso-label">Sessão ativa</div>
+  <div class="uso-valor">{nome_usr.split()[0]}</div>
+  <div style="color:#35405a;font-size:.68rem;margin-top:.15rem">{perfil_usr} · {req_total} consultas</div>
+</div>
+""", unsafe_allow_html=True)
+
+    # Botão painel admin (só para admin)
+    if perfil_usr == "admin":
+        if st.button("⚙️  Painel de Usuários", key="btn_admin",
+                     use_container_width=True, type="secondary"):
+            st.session_state.modulo = "admin"
+            st.rerun()
+
+    if st.button("🚪  Sair", key="btn_logout", use_container_width=True,
+                 type="secondary"):
+        st.session_state.autenticado = False
+        st.session_state.usuario = {}
+        st.session_state.req_contador = 0
+        st.rerun()
+
     st.markdown("""
 <div style="position:fixed;bottom:1.2rem;left:0;width:var(--sidebar-width,260px);text-align:center;color:#1a1f35;font-size:0.65rem;letter-spacing:0.06em;">
   MAGUS.IA &nbsp;·&nbsp; © 2026<br>Use apenas dados fictícios
@@ -1669,6 +1789,10 @@ if btn_contratos and st.session_state.modulo != "contratos":
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO CONTRATOS
 # ══════════════════════════════════════════════════════════════════════════════
+
+if st.session_state.modulo == "admin":
+    painel_admin()
+    st.stop()
 
 if st.session_state.modulo == "contratos":
     render_contratos()

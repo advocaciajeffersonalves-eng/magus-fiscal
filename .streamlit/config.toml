@@ -9,7 +9,10 @@ font = "sans serif"
 [server]
 headless = true
 enableCORS = false
-enableXsrfProtection = true
+enableXsrfProtection = false
+port = 8501
 
 [browser]
 gatherUsageStats = false
+serverAddress = "magusfiscal.com.br"
+serverPort = 443

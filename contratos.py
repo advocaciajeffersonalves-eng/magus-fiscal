@@ -72,7 +72,7 @@ def _whisper(audio_bytes: bytes, filename: str = "audio.wav") -> str:
 
 def _init():
     defaults = {
-        "ct_fase": "modo",          # modo | tipo | coleta | perguntas | resultado
+        "ct_fase": "modo",          # modo | assessor | tipo | coleta | perguntas | resultado
         "ct_modo": None,            # qualificado | completo
         "ct_tipo": None,
         "ct_jur":  "Brasil",
@@ -83,6 +83,8 @@ def _init():
         "ct_descricao_inicial": "",
         "ct_audio_gravacoes": [],   # transcrições acumuladas
         "ct_audio_contador": 0,     # chave única p/ cada gravação
+        "ct_assessor_conversa": [], # histórico do chat assessor
+        "ct_assessor_tipo": None,   # tipo identificado pelo assessor
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -196,6 +198,31 @@ Informações essenciais para este contrato:
 - Prazo e condições de rescisão
 - Dados específicos do tipo de contrato"""
 
+def _system_assessor() -> str:
+    lista = "\n".join(f'  • "{k}" → {v}' for k, v in TIPOS_CONTRATO.items())
+    return f"""Você é o MAGUS Assessor — especialista em identificar qual instrumento contratual é mais adequado para a situação do usuário.
+
+Instrumentos disponíveis:
+{lista}
+
+SUA MISSÃO:
+1. Escute a situação do usuário com atenção
+2. Faça UMA pergunta por vez — a mais importante que ainda falta entender
+3. Quando tiver certeza, faça a recomendação no formato abaixo
+4. Se o caso puder encaixar em mais de um instrumento, explique as diferenças e recomende o principal
+
+REGRAS:
+- Use linguagem simples e amigável — sem jargão jurídico
+- Nunca recomende sem ter informações suficientes
+- Seja direto e objetivo
+- Responda SEMPRE em português do Brasil
+
+QUANDO identificar o instrumento correto, use EXATAMENTE este bloco ao final da sua mensagem:
+---RECOMENDAÇÃO---
+INSTRUMENTO: [chave exata, ex: "🔒  NDA — Confidencialidade"]
+MOTIVO: [1-2 frases explicando por que este instrumento é o mais adequado]
+---FIM---"""
+
 # ─── TELA 1: ESCOLHA DO MODO ────────────────────────────────────────────────
 
 def _tela_modo():
@@ -247,6 +274,179 @@ def _tela_modo():
             st.session_state.ct_modo = "completo"
             st.session_state.ct_fase = "tipo"
             st.rerun()
+
+    # ── Card do Assessor ──────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("""
+    <div style='border:2px solid #2a7a5a;border-radius:12px;padding:20px 24px;background:#071a10'>
+    <h3 style='color:#50d890;margin-top:0'>💬 Não sabe qual instrumento precisa?</h3>
+    <p style='color:#a0d8b8;margin-bottom:8px'>
+    Me conte sua situação em linguagem simples — o Assessor fará as perguntas certas e vai indicar
+    o instrumento mais adequado para o seu caso. Aceita texto, áudio ou arquivo.</p>
+    <ul style='color:#80b898;font-size:0.9rem;margin-bottom:0'>
+    <li>Ideal para quem não conhece as diferenças entre os contratos</li>
+    <li>IA pergunta até ter certeza do instrumento certo</li>
+    <li>Aceita descrição por texto, voz ou documento</li>
+    </ul>
+    </div>""", unsafe_allow_html=True)
+    st.markdown("")
+    if st.button("💬  Me ajude a escolher o instrumento certo", use_container_width=True,
+                 key="btn_assessor", type="secondary"):
+        st.session_state.ct_assessor_conversa = []
+        st.session_state.ct_assessor_tipo = None
+        st.session_state.ct_fase = "assessor"
+        st.rerun()
+
+# ─── TELA 1B: ASSESSOR (chat para identificar instrumento) ──────────────────
+
+def _tela_assessor():
+    conversa = st.session_state.ct_assessor_conversa
+    tipo_indicado = st.session_state.ct_assessor_tipo
+
+    st.markdown("""
+    <div style='background:linear-gradient(90deg,#071a10,#0f3020);padding:16px 24px;
+    border-radius:10px;margin-bottom:20px'>
+    <h3 style='color:#50d890;margin:0'>💬 Assessor de Contratos</h3>
+    <p style='color:#80c8a0;margin:4px 0 0'>Descreva sua situação — identificarei o instrumento ideal para você</p>
+    </div>""", unsafe_allow_html=True)
+
+    col_back, _ = st.columns([1, 4])
+    with col_back:
+        if st.button("← Voltar", key="back_assessor"):
+            st.session_state.ct_assessor_conversa = []
+            st.session_state.ct_assessor_tipo = None
+            st.session_state.ct_fase = "modo"
+            st.rerun()
+
+    # Histórico do chat
+    for msg in conversa:
+        avatar = "👤" if msg["role"] == "user" else "⚖️"
+        with st.chat_message(msg["role"], avatar=avatar):
+            # Ocultar bloco técnico de recomendação do display
+            conteudo = msg["content"]
+            if "---RECOMENDAÇÃO---" in conteudo:
+                conteudo = conteudo[:conteudo.index("---RECOMENDAÇÃO---")].strip()
+            st.write(conteudo)
+
+    # Instrumento identificado → mostrar confirmação
+    if tipo_indicado:
+        st.markdown("---")
+        st.success(f"✅ **Instrumento recomendado:** {tipo_indicado.split('  ')[-1]}")
+        st.caption(f"_{TIPOS_CONTRATO.get(tipo_indicado, '')}_")
+        st.markdown("")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🚀 Gerar este contrato →", type="primary",
+                         use_container_width=True, key="btn_usar_assessor"):
+                st.session_state.ct_tipo = tipo_indicado
+                st.session_state.ct_fase = "modo"
+                st.rerun()
+        with col2:
+            if st.button("💬 Quero continuar conversando", use_container_width=True,
+                         key="btn_continuar_assessor"):
+                st.session_state.ct_assessor_tipo = None
+                st.rerun()
+        return
+
+    # Chamar Claude se último msg é do usuário
+    if conversa and conversa[-1]["role"] == "user":
+        with st.spinner("⚖️ Analisando seu caso..."):
+            resp = _claude().messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1024,
+                system=_system_assessor(),
+                messages=conversa
+            )
+            resposta = resp.content[0].text
+
+            # Detectar recomendação no texto
+            if "---RECOMENDAÇÃO---" in resposta:
+                for linha in resposta.split("\n"):
+                    if linha.strip().startswith("INSTRUMENTO:"):
+                        tipo_raw = linha.replace("INSTRUMENTO:", "").strip().strip('"').strip("'")
+                        for k in TIPOS_CONTRATO:
+                            if tipo_raw.strip() == k.strip() or tipo_raw in k or k.split("  ")[-1] in tipo_raw:
+                                st.session_state.ct_assessor_tipo = k
+                                # Preservar descrição para uso na coleta
+                                textos = [m["content"] for m in conversa if m["role"] == "user"]
+                                st.session_state.ct_descricao_inicial = " | ".join(textos[-3:])
+                                break
+
+            conversa.append({"role": "assistant", "content": resposta})
+            st.session_state.ct_assessor_conversa = conversa
+            st.rerun()
+
+    # Input: texto (sem st.chat_input para evitar problema de módulo JS no tunnel)
+    placeholder_txt = (
+        "Descreva sua situação ou responda a pergunta acima..."
+        if conversa else
+        "Conte o que você precisa — ex: 'Vou apresentar minha ideia para um sócio'..."
+    )
+    _ci1, _ci2 = st.columns([5, 1])
+    with _ci1:
+        resposta_user = st.text_input(
+            "", placeholder=placeholder_txt,
+            key=f"assessor_inp_{len(conversa)}",
+            label_visibility="collapsed"
+        )
+    with _ci2:
+        _enviar_a = st.button("→", key=f"assessor_btn_{len(conversa)}",
+                              type="primary", use_container_width=True)
+    if _enviar_a and resposta_user:
+        conversa.append({"role": "user", "content": resposta_user})
+        st.session_state.ct_assessor_conversa = conversa
+        st.rerun()
+
+    # Input: voz e arquivo lado a lado
+    col_v, col_a = st.columns(2)
+    with col_v:
+        with st.expander("🎙️ Responder por voz"):
+            st.caption("Grave sua situação — transcrevo automaticamente ao parar.")
+            audio_a = st.audio_input("Grave:", key=f"audio_assessor_{len(conversa)}")
+            if audio_a:
+                with st.spinner("🎙️ Transcrevendo..."):
+                    texto = _whisper(audio_a.read())
+                if texto and not texto.startswith("[Configure"):
+                    conversa.append({"role": "user", "content": texto})
+                    st.session_state.ct_assessor_conversa = conversa
+                    st.rerun()
+                else:
+                    st.error(texto or "Erro na transcrição. Verifique a chave OpenAI.")
+    with col_a:
+        with st.expander("📎 Enviar documento"):
+            st.caption("PDF, DOCX ou TXT descrevendo sua situação.")
+            arq_a = st.file_uploader("Selecione:", type=["pdf","docx","txt"],
+                                     key=f"arq_assessor_{len(conversa)}")
+            if arq_a:
+                texto_arq = _extrair_arquivo(arq_a)
+                if texto_arq:
+                    st.success(f"✅ {arq_a.name} lido")
+                    if st.button("Usar este documento →",
+                                 key=f"btn_arq_assessor_{len(conversa)}", type="primary"):
+                        resumo = texto_arq[:2000] + ("..." if len(texto_arq) > 2000 else "")
+                        conversa.append({"role": "user",
+                                         "content": f"[Documento: {arq_a.name}]\n\n{resumo}"})
+                        st.session_state.ct_assessor_conversa = conversa
+                        st.rerun()
+
+    # Exemplos rápidos (só quando a conversa ainda não começou)
+    if not conversa:
+        st.markdown("---")
+        st.caption("**Exemplos — clique para começar:**")
+        exemplos = [
+            ("Vou apresentar minha ideia de negócio para um investidor",    "ex_assessor_1"),
+            ("Preciso contratar um profissional autônomo para minha empresa","ex_assessor_2"),
+            ("Vou fazer uma parceria comercial com outra empresa",           "ex_assessor_3"),
+            ("Quero proteger meu patrimônio e planejar a sucessão",          "ex_assessor_4"),
+        ]
+        col1, col2 = st.columns(2)
+        for i, (texto, key) in enumerate(exemplos):
+            col = col1 if i % 2 == 0 else col2
+            with col:
+                if st.button(f'"{texto}"', use_container_width=True, key=key):
+                    conversa.append({"role": "user", "content": texto})
+                    st.session_state.ct_assessor_conversa = conversa
+                    st.rerun()
 
 # ─── TELA 2: TIPO E JURISDIÇÃO ──────────────────────────────────────────────
 
@@ -564,7 +764,7 @@ def _tela_perguntas():
             sys = _system_entrevistador(tipo, jur, estado)
             resp = _claude().messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=600,
+                max_tokens=1024,
                 system=sys,
                 messages=conversa
             )
@@ -574,25 +774,54 @@ def _tela_perguntas():
 
     # Campo de resposta do usuário
     else:
-        # Input por texto
-        resposta_user = st.chat_input("Sua resposta...", key="chat_resposta")
-        if resposta_user:
+        # Input por texto (sem st.chat_input para evitar problema JS no tunnel)
+        _n = len(st.session_state.ct_conversa)
+        _cq1, _cq2 = st.columns([5, 1])
+        with _cq1:
+            resposta_user = st.text_input(
+                "", placeholder="Sua resposta...",
+                key=f"chat_resp_{_n}",
+                label_visibility="collapsed"
+            )
+        with _cq2:
+            _enviar_q = st.button("→", key=f"chat_btn_{_n}",
+                                  type="primary", use_container_width=True)
+        if _enviar_q and resposta_user:
             st.session_state.ct_conversa.append({"role": "user", "content": resposta_user})
             st.rerun()
 
-        # Opção de responder por voz — auto-adiciona ao chat após transcrição
-        with st.expander("🎙️ Responder por voz"):
-            st.caption("Grave sua resposta. Ao parar, transcrevo e adiciono automaticamente.")
-            audio_resp = st.audio_input("Grave:", key=f"audio_resp_{len(conversa)}")
-            if audio_resp:
-                with st.spinner("🎙️ Transcrevendo..."):
-                    texto = _whisper(audio_resp.read())
-                if texto and not texto.startswith("[Configure"):
-                    st.info(f"📝 Entendi: _{texto}_")
-                    st.session_state.ct_conversa.append({"role": "user", "content": texto})
-                    st.rerun()
-                else:
-                    st.error(texto or "Erro na transcrição.")
+        # Opções de resposta: voz e arquivo lado a lado
+        col_rv, col_ra = st.columns(2)
+        with col_rv:
+            with st.expander("🎙️ Responder por voz"):
+                st.caption("Grave sua resposta. Ao parar, transcrevo e adiciono automaticamente.")
+                audio_resp = st.audio_input("Grave:", key=f"audio_resp_{len(conversa)}")
+                if audio_resp:
+                    with st.spinner("🎙️ Transcrevendo..."):
+                        texto = _whisper(audio_resp.read())
+                    if texto and not texto.startswith("[Configure"):
+                        st.info(f"📝 Entendi: _{texto}_")
+                        st.session_state.ct_conversa.append({"role": "user", "content": texto})
+                        st.rerun()
+                    else:
+                        st.error(texto or "Erro na transcrição.")
+        with col_ra:
+            with st.expander("📎 Enviar documento"):
+                st.caption("PDF, DOCX ou TXT com informações para o contrato.")
+                arq_resp = st.file_uploader("Selecione:", type=["pdf","docx","txt"],
+                                            key=f"arq_resp_{len(conversa)}")
+                if arq_resp:
+                    texto_arq = _extrair_arquivo(arq_resp)
+                    if texto_arq:
+                        st.success(f"✅ {arq_resp.name} lido — {len(texto_arq)} caracteres")
+                        resumo = texto_arq[:2000] + ("..." if len(texto_arq) > 2000 else "")
+                        if st.button("📄 Adicionar como informação →",
+                                     key=f"btn_arq_resp_{len(conversa)}", type="primary"):
+                            st.session_state.ct_conversa.append({
+                                "role": "user",
+                                "content": f"[Documento enviado: {arq_resp.name}]\n\n{resumo}"
+                            })
+                            st.rerun()
 
 # ─── GERAÇÃO DO CONTRATO ─────────────────────────────────────────────────────
 
@@ -624,14 +853,22 @@ def _gerar_e_mostrar(modo: str):
         f"Gere a minuta contratual completa agora."
     )
 
-    with st.spinner("📝 Gerando minuta contratual..."):
-        resp = _claude().messages.create(
-            model="claude-opus-4-7",
-            max_tokens=4096,
-            system=system,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        minuta = resp.content[0].text
+    st.markdown("#### 📝 Gerando minuta contratual...")
+    st.caption("Contratos longos podem levar até 2 minutos — aguarde, o texto aparecerá aqui em tempo real.")
+    output_area = st.empty()
+    minuta_chunks = []
+
+    with _claude().messages.stream(
+        model="claude-opus-4-7",
+        max_tokens=32000,
+        system=system,
+        messages=[{"role": "user", "content": prompt}]
+    ) as stream:
+        for text in stream.text_stream:
+            minuta_chunks.append(text)
+            output_area.markdown("".join(minuta_chunks))
+
+    minuta = "".join(minuta_chunks)
 
     st.session_state.ct_minuta = minuta
     st.session_state.ct_fase   = "resultado"
@@ -703,6 +940,8 @@ def render_contratos():
 
     if fase == "modo":
         _tela_modo()
+    elif fase == "assessor":
+        _tela_assessor()
     elif fase == "tipo":
         _tela_tipo()
     elif fase == "coleta":
