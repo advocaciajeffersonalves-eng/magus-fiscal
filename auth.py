@@ -3,11 +3,15 @@ auth.py — Módulo de autenticação e gestão de usuários MAGUS Fiscal
 Banco de dados: SQLite local (usuarios.db)
 """
 import os
+import ssl
 import hashlib
 import secrets
 import string
 import sqlite3
+import smtplib
 from datetime import datetime
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import streamlit as st
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "usuarios.db")
@@ -63,6 +67,85 @@ def _gerar_senha() -> str:
 
 def _agora() -> str:
     return datetime.now().strftime("%d/%m/%Y %H:%M")
+
+# ── Envio de e-mail de acesso ─────────────────────────────────────────────────
+
+def enviar_email_acesso(nome: str, email_destino: str, senha: str) -> dict:
+    """
+    Envia e-mail de boas-vindas com a senha de acesso ao usuário aprovado.
+    Retorna {"ok": True} ou {"ok": False, "erro": "mensagem"}.
+    """
+    gmail_user = os.getenv("GMAIL_USER", "").strip()
+    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+
+    if not gmail_user or not gmail_pass:
+        return {"ok": False, "erro": "Credenciais de e-mail não configuradas no .env"}
+
+    assunto = "✅ Seu acesso ao MAGUS Fiscal foi aprovado"
+    corpo_html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:540px;margin:0 auto;background:#0a0a0f;color:#e8e8f0;border-radius:12px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#1a1428,#0e0c1a);padding:2rem;text-align:center;border-bottom:2px solid #c8973a;">
+        <h1 style="color:#c8973a;margin:0;font-size:1.8rem;">⚖️ MAGUS Fiscal</h1>
+        <p style="color:#888;margin:.5rem 0 0;font-size:.9rem;">Plataforma de IA Tributária</p>
+      </div>
+      <div style="padding:2rem;">
+        <p style="font-size:1rem;">Olá, <strong>{nome}</strong>!</p>
+        <p style="color:#aaa;">Seu acesso à plataforma MAGUS Fiscal foi <strong style="color:#48c870;">aprovado</strong>. Use as credenciais abaixo para entrar:</p>
+
+        <div style="background:#0e1117;border:1px solid #c8973a;border-radius:8px;padding:1.2rem;margin:1.5rem 0;text-align:center;">
+          <p style="color:#888;font-size:.8rem;margin:0 0 .4rem;">🔗 Endereço de acesso</p>
+          <a href="https://magusfiscal.com.br" style="color:#c8973a;font-size:1.1rem;font-weight:700;text-decoration:none;">magusfiscal.com.br</a>
+        </div>
+
+        <div style="background:#0e1117;border:1px solid rgba(200,151,58,.3);border-radius:8px;padding:1.2rem;margin:1rem 0;">
+          <p style="color:#888;font-size:.8rem;margin:0 0 .3rem;">📧 E-mail de acesso</p>
+          <p style="font-family:monospace;font-size:1rem;margin:0;color:#e8e8f0;">{email_destino}</p>
+        </div>
+
+        <div style="background:#0e1117;border:1px solid rgba(72,200,112,.4);border-radius:8px;padding:1.2rem;margin:1rem 0;text-align:center;">
+          <p style="color:#888;font-size:.8rem;margin:0 0 .3rem;">🔑 Senha de acesso</p>
+          <p style="font-family:monospace;font-size:1.6rem;font-weight:800;letter-spacing:.15em;color:#f0e0c0;margin:0;">{senha}</p>
+        </div>
+
+        <p style="color:#888;font-size:.85rem;margin-top:1.5rem;">
+          ⚠️ <strong>Guarde esta senha</strong> — ela não é armazenada em texto visível.<br>
+          Se precisar de nova senha, entre em contato com a equipe MAGUS.
+        </p>
+
+        <div style="margin-top:1.5rem;text-align:center;">
+          <a href="https://magusfiscal.com.br" style="background:linear-gradient(135deg,#c8973a,#e6b85c);color:#0a0a0f;padding:.8rem 2rem;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">
+            → Acessar agora
+          </a>
+        </div>
+      </div>
+      <div style="padding:1rem 2rem;text-align:center;border-top:1px solid #1a1f35;">
+        <p style="color:#444;font-size:.75rem;margin:0;">
+          MAGUS.IA Tecnologia · juridico@magus.ia.br<br>
+          Este é um e-mail automático — não responda diretamente.
+        </p>
+      </div>
+    </div>
+    """
+
+    reply_to     = os.getenv("GMAIL_REPLY_TO", gmail_user).strip()
+    from_name    = os.getenv("GMAIL_FROM_NAME", "MAGUS Fiscal").strip()
+    from_address = os.getenv("GMAIL_FROM_ADDRESS", gmail_user).strip()
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["From"]     = f"{from_name} <{from_address}>"
+        msg["To"]       = email_destino
+        msg["Subject"]  = assunto
+        msg["Reply-To"] = reply_to
+        msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as srv:
+            srv.login(gmail_user, gmail_pass)
+            srv.sendmail(gmail_user, email_destino, msg.as_string())
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "erro": str(e)}
 
 # ── CRUD de usuários ──────────────────────────────────────────────────────────
 
@@ -324,9 +407,12 @@ def painel_admin():
                                     key=f"obs_{u['id']}")
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("✅ Aprovar e gerar senha", key=f"ap_{u['id']}", type="primary"):
+                    if st.button("✅ Aprovar e enviar acesso", key=f"ap_{u['id']}", type="primary"):
                         nova = aprovar_usuario(u['id'], obs)
                         st.session_state[f"senha_gerada_{u['id']}"] = nova
+                        # Envia e-mail automaticamente
+                        resultado_email = enviar_email_acesso(u['nome'], u['email'], nova)
+                        st.session_state[f"email_status_{u['id']}"] = resultado_email
                         st.rerun()
                 with col2:
                     if st.button("🗑️ Recusar e excluir", key=f"ex_{u['id']}"):
@@ -335,13 +421,18 @@ def painel_admin():
 
                 if f"senha_gerada_{u['id']}" in st.session_state:
                     senha_mostrar = st.session_state[f"senha_gerada_{u['id']}"]
+                    email_res = st.session_state.get(f"email_status_{u['id']}", {})
+                    if email_res.get("ok"):
+                        email_info = f'<p style="color:#48c870;font-size:.82rem;margin:.6rem 0 0">📧 <b>E-mail enviado</b> para <b>{u["email"]}</b></p>'
+                    elif email_res.get("erro"):
+                        email_info = f'<p style="color:#e09040;font-size:.8rem;margin:.6rem 0 0">⚠️ E-mail não enviado ({email_res["erro"]}). Envie a senha manualmente.</p>'
+                    else:
+                        email_info = f'<p style="color:#6a9a7a;font-size:.8rem;margin:.4rem 0 0">Envie por WhatsApp/e-mail para <b>{u["email"]}</b></p>'
                     st.markdown(f"""
                     <div class="senha-card">
-                      <h4>✅ Usuário aprovado! Envie esta senha:</h4>
+                      <h4>✅ Usuário aprovado!</h4>
                       <div class="senha-gerada">{senha_mostrar}</div>
-                      <p style="color:#6a9a7a;font-size:.8rem;margin:.4rem 0 0">
-                        Copie e envie por WhatsApp/e-mail para <b>{u['email']}</b>
-                      </p>
+                      {email_info}
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -360,6 +451,8 @@ def painel_admin():
                     if st.button("🔄 Nova senha", key=f"ns_{u['id']}"):
                         nova = reativar_usuario(u['id'])
                         st.session_state[f"senha_gerada_{u['id']}"] = nova
+                        resultado_email = enviar_email_acesso(u['nome'], u['email'], nova)
+                        st.session_state[f"email_status_{u['id']}"] = resultado_email
                         st.rerun()
                 with col2:
                     if st.button("🚫 Bloquear", key=f"bl_{u['id']}"):
@@ -372,13 +465,18 @@ def painel_admin():
 
                 if f"senha_gerada_{u['id']}" in st.session_state:
                     senha_mostrar = st.session_state[f"senha_gerada_{u['id']}"]
+                    email_res = st.session_state.get(f"email_status_{u['id']}", {})
+                    if email_res.get("ok"):
+                        email_info = f'<p style="color:#48c870;font-size:.82rem;margin:.6rem 0 0">📧 <b>E-mail enviado</b> para <b>{u["email"]}</b></p>'
+                    elif email_res.get("erro"):
+                        email_info = f'<p style="color:#e09040;font-size:.8rem;margin:.6rem 0 0">⚠️ E-mail não enviado ({email_res["erro"]}). Envie manualmente.</p>'
+                    else:
+                        email_info = f'<p style="color:#6a9a7a;font-size:.8rem;margin:.4rem 0 0">Envie para <b>{u["email"]}</b></p>'
                     st.markdown(f"""
                     <div class="senha-card">
                       <h4>🔄 Nova senha gerada:</h4>
                       <div class="senha-gerada">{senha_mostrar}</div>
-                      <p style="color:#6a9a7a;font-size:.8rem;margin:.4rem 0 0">
-                        Envie para <b>{u['email']}</b>
-                      </p>
+                      {email_info}
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -399,6 +497,8 @@ def painel_admin():
                     if st.button("✅ Reativar", key=f"re_{u['id']}", type="primary"):
                         nova = reativar_usuario(u['id'])
                         st.session_state[f"senha_gerada_{u['id']}"] = nova
+                        resultado_email = enviar_email_acesso(u['nome'], u['email'], nova)
+                        st.session_state[f"email_status_{u['id']}"] = resultado_email
                         st.rerun()
                 with col2:
                     if st.button("🗑️ Excluir", key=f"del2_{u['id']}"):
