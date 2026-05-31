@@ -1,6 +1,7 @@
 import os
 import re
 import ssl
+import time
 import smtplib
 import anthropic
 import streamlit as st
@@ -920,11 +921,14 @@ def formatar_descricao_transicao(dados):
 # ── API ───────────────────────────────────────────────────────────────────────
 
 def analisar(dados, tipo, dre_texto=None, previsao=None, modulo="brasil"):
-    # Verifica limite de sessão antes de chamar a API
-    limite = int(os.getenv("LIMITE_SESSAO", "20"))
-    if st.session_state.req_contador >= limite:
-        st.error("⚠️ Limite de consultas desta sessão atingido. Entre em contato com a equipe MAGUS.")
-        st.stop()
+    uid = st.session_state.get("usuario", {}).get("id", 0)
+
+    # Verifica limite diário/mensal (apenas para usuários não-admin)
+    if uid:
+        limite_check = verificar_limite(uid)
+        if not limite_check["ok"]:
+            st.error(f"⚠️ {limite_check['motivo']}")
+            st.stop()
 
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     system = build_system_prompt(tipo, modulo)
@@ -934,18 +938,25 @@ def analisar(dados, tipo, dre_texto=None, previsao=None, modulo="brasil"):
     else:
         descricao = formatar_descricao(dados, tipo, dre_texto, previsao)
         max_tok = 3500
-    resposta = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=max_tok,
-        system=system,
-        messages=[{"role": "user", "content": descricao}]
-    )
-    # Incrementa contador de uso (sessão + banco)
-    st.session_state.req_contador += 1
-    uid = st.session_state.get("usuario", {}).get("id", 0)
-    if uid:
-        incrementar_uso(uid)
-    return resposta.content[0].text
+
+    t0 = time.time()
+    try:
+        resposta = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=max_tok,
+            system=system,
+            messages=[{"role": "user", "content": descricao}]
+        )
+        tempo_ms = int((time.time() - t0) * 1000)
+        st.session_state.req_contador += 1
+        if uid:
+            registrar_consulta(uid, modulo, tipo, "ok", "", tempo_ms)
+        return resposta.content[0].text
+    except Exception as e:
+        tempo_ms = int((time.time() - t0) * 1000)
+        if uid:
+            registrar_consulta(uid, modulo, tipo, "erro", str(e), tempo_ms)
+        raise
 
 
 # ── Risco e PDF ───────────────────────────────────────────────────────────────
@@ -1620,7 +1631,7 @@ for k, v in [("resultado", None), ("analise_dados", {}), ("analise_tipo", ""), (
         st.session_state[k] = v
 
 from contratos import render_contratos
-from auth import tela_login, painel_admin, incrementar_uso
+from auth import tela_login, painel_admin, incrementar_uso, verificar_limite, registrar_consulta, tela_troca_senha
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 
@@ -1725,6 +1736,11 @@ with st.sidebar:
             st.session_state.modulo = "admin"
             st.rerun()
 
+    if st.button("🔑  Alterar Senha", key="btn_senha",
+                 use_container_width=True, type="secondary"):
+        st.session_state.modulo = "troca_senha"
+        st.rerun()
+
     if st.button("🚪  Sair", key="btn_logout", use_container_width=True,
                  type="secondary"):
         st.session_state.autenticado = False
@@ -1757,6 +1773,14 @@ if btn_contratos and st.session_state.modulo != "contratos":
 
 if st.session_state.modulo == "admin":
     painel_admin()
+    st.stop()
+
+if st.session_state.modulo == "troca_senha":
+    uid_logado = st.session_state.get("usuario", {}).get("id", 0)
+    tela_troca_senha(uid_logado)
+    if st.button("← Voltar", key="btn_volta_senha"):
+        st.session_state.modulo = "brasil"
+        st.rerun()
     st.stop()
 
 if st.session_state.modulo == "contratos":
