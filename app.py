@@ -1627,41 +1627,6 @@ from auth import tela_login, painel_admin, incrementar_uso
 st.set_page_config(page_title="MAGUS Fiscal", page_icon="assets/favicon.png", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
 
-# ── Redirect Streamlit Cloud → domínio oficial ────────────────────────────────
-# .env só existe na máquina local. No Streamlit Cloud, o arquivo não está presente.
-# Quando alguém acessa magus-fiscal.streamlit.app, redirecionamos para magusfiscal.com.br
-_ENV_LOCAL = os.path.isfile(os.path.join(os.path.dirname(__file__), ".env"))
-if not _ENV_LOCAL:
-    st.markdown("""
-    <style>
-    .redirect-box {
-        display: flex; flex-direction: column; align-items: center;
-        justify-content: center; min-height: 60vh; text-align: center;
-        gap: 1.5rem;
-    }
-    .redirect-logo { font-size: 3rem; }
-    .redirect-title { font-size: 1.8rem; font-weight: 700; color: #c8973a; }
-    .redirect-msg { font-size: 1.1rem; color: #aaa; }
-    .redirect-link a {
-        background: linear-gradient(135deg, #c8973a, #e6b85c);
-        color: #0a0a0f !important; padding: 0.8rem 2rem;
-        border-radius: 8px; font-weight: 700; text-decoration: none;
-        font-size: 1.1rem;
-    }
-    </style>
-    <meta http-equiv="refresh" content="3; url=https://magusfiscal.com.br">
-    <script>setTimeout(function(){window.location.replace('https://magusfiscal.com.br');},500);</script>
-    <div class="redirect-box">
-      <div class="redirect-logo">⚡</div>
-      <div class="redirect-title">MAGUS Fiscal</div>
-      <div class="redirect-msg">Redirecionando para o endereço oficial…</div>
-      <div class="redirect-link">
-        <a href="https://magusfiscal.com.br">→ magusfiscal.com.br</a>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.stop()
-
 # ── Auth gate ──────────────────────────────────────────────────────────────────
 if not st.session_state.autenticado:
     tela_login()
