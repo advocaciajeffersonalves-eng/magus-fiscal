@@ -101,22 +101,17 @@ def _hoje_str() -> str:
 def _mes_str() -> str:
     return datetime.now().strftime("%Y-%m")
 
-# ── WhatsApp via CallMeBot (gratuito) ─────────────────────────────────────────
+# ── Telegram Bot ─────────────────────────────────────────────────────────────
 
-def enviar_whatsapp(mensagem: str) -> dict:
-    """
-    Envia mensagem WhatsApp via CallMeBot.
-    Configurar no .env: WHATSAPP_PHONE (ex: 5562999999999) e WHATSAPP_APIKEY.
-    Ativação única: adicione +34 644 28 34 04 nos contatos e envie
-    'I allow callmebot to send me messages' — você receberá o APIKEY.
-    """
-    phone  = os.getenv("WHATSAPP_PHONE", "").strip()
-    apikey = os.getenv("WHATSAPP_APIKEY", "").strip()
-    if not phone or not apikey:
-        return {"ok": False, "erro": "WHATSAPP_PHONE ou WHATSAPP_APIKEY não configurados no .env"}
+def enviar_telegram(mensagem: str) -> dict:
+    """Envia mensagem ao admin via Telegram Bot. Configurar TELEGRAM_TOKEN e TELEGRAM_CHAT_ID no .env."""
+    token   = os.getenv("TELEGRAM_TOKEN", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat_id:
+        return {"ok": False, "erro": "TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID não configurados no .env"}
     try:
-        params = urllib.parse.urlencode({"phone": phone, "text": mensagem, "apikey": apikey})
-        url = f"https://api.callmebot.com/whatsapp.php?{params}"
+        params = urllib.parse.urlencode({"chat_id": chat_id, "text": mensagem, "parse_mode": "Markdown"})
+        url = f"https://api.telegram.org/bot{token}/sendMessage?{params}"
         with urllib.request.urlopen(url, timeout=8) as r:
             r.read()
         return {"ok": True}
@@ -248,7 +243,7 @@ def registrar_consulta(user_id: int, modulo: str, tipo: str, status: str, erro: 
         if row2:
             nome_u, email_u, c_hoje_novo, c_mes_novo = row2
             if c_hoje_novo >= LIMITE_DIA:
-                enviar_whatsapp(
+                enviar_telegram(
                     f"⚠️ MAGUS Fiscal — Limite diário atingido\n"
                     f"Usuário: *{nome_u}* ({email_u})\n"
                     f"Consultas hoje: {c_hoje_novo}/{LIMITE_DIA} | Mês: {c_mes_novo}/{LIMITE_MES}\n"
@@ -283,7 +278,7 @@ def cadastrar_usuario(nome: str, email: str, telefone: str, perfil: str) -> dict
                 (nome.strip(), email, telefone.strip(), perfil, _agora())
             )
             c.commit()
-        enviar_whatsapp(
+        enviar_telegram(
             f"📩 *Novo cadastro MAGUS Fiscal*\n"
             f"Nome: {nome.strip()}\n"
             f"E-mail: {email}\n"
