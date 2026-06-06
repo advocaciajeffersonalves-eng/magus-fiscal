@@ -1549,7 +1549,14 @@ hr, [data-testid="stDivider"] > hr { border-color: #141828 !important; }
     [data-testid="stSidebar"] { min-width: 220px !important; }
     .element-container .stMarkdown h1 { font-size: 1.1rem !important; }
     .element-container .stMarkdown h2 { font-size: 0.95rem !important; }
-    .stButton > button { font-size: 0.82rem !important; padding: 0.5rem 0.8rem !important; }
+    .stButton > button { font-size: 0.82rem !important; padding: 0.5rem 0.8rem !important; min-height: 44px !important; }
+    /* empilha colunas: no celular cada coluna ocupa a largura toda */
+    [data-testid="stHorizontalBlock"] { flex-direction: column !important; gap: 0.4rem !important; }
+    [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; min-width: 100% !important; }
+    /* fonte 16px nos campos evita o "zoom" automatico do iPhone ao tocar */
+    input, textarea, .stTextInput input, .stTextArea textarea, .stNumberInput input { font-size: 16px !important; }
+    /* tabelas largas de resultado ganham rolagem horizontal em vez de estourar a tela */
+    .element-container .stMarkdown { overflow-x: auto !important; }
 }
 @media (max-width: 480px) {
     .block-container { padding: 0.6rem 0.5rem !important; }
