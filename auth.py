@@ -139,7 +139,7 @@ def enviar_email_acesso(nome: str, email_destino: str, senha: str) -> dict:
         <p style="color:#aaa;">Seu acesso foi <strong style="color:#48c870;">aprovado</strong>. Use as credenciais abaixo:</p>
         <div style="background:#0e1117;border:1px solid #c8973a;border-radius:8px;padding:1.2rem;margin:1.5rem 0;text-align:center;">
           <p style="color:#888;font-size:.8rem;margin:0 0 .4rem;">🔗 Endereço de acesso</p>
-          <a href="https://magusfiscal.com.br" style="color:#c8973a;font-size:1.1rem;font-weight:700;text-decoration:none;">magusfiscal.com.br</a>
+          <a href="https://app.magusfiscal.com.br" style="color:#c8973a;font-size:1.1rem;font-weight:700;text-decoration:none;">app.magusfiscal.com.br</a>
         </div>
         <div style="background:#0e1117;border:1px solid rgba(200,151,58,.3);border-radius:8px;padding:1.2rem;margin:1rem 0;">
           <p style="color:#888;font-size:.8rem;margin:0 0 .3rem;">📧 E-mail de acesso</p>
@@ -154,7 +154,7 @@ def enviar_email_acesso(nome: str, email_destino: str, senha: str) -> dict:
           Se precisar de nova senha, entre em contato com a equipe MAGUS.
         </p>
         <div style="margin-top:1.5rem;text-align:center;">
-          <a href="https://magusfiscal.com.br" style="background:linear-gradient(135deg,#c8973a,#e6b85c);color:#0a0a0f;padding:.8rem 2rem;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">
+          <a href="https://app.magusfiscal.com.br" style="background:linear-gradient(135deg,#c8973a,#e6b85c);color:#0a0a0f;padding:.8rem 2rem;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">
             → Acessar agora
           </a>
         </div>
@@ -385,13 +385,111 @@ def atualizar_obs(user_id: int, obs: str):
 
 CSS_AUTH = """
 <style>
-.auth-tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; }
-.auth-tab-ativo   { background:rgba(200,151,58,.12); border:1px solid rgba(200,151,58,.4);
-                    color:#c8973a; border-radius:8px; padding:.4rem 1rem;
-                    font-size:.78rem; font-weight:700; cursor:default; }
-.auth-tab-inativo { background:transparent; border:1px solid #1a1f35;
-                    color:#35405a; border-radius:8px; padding:.4rem 1rem;
-                    font-size:.78rem; cursor:pointer; }
+@keyframes magus-run {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -1000; }
+}
+@keyframes magus-glow-bg {
+  0%,100% { opacity: 0.10; }
+  50%     { opacity: 0.20; }
+}
+@keyframes magus-ant {
+  0%,100% { stroke: rgba(201,161,74,0.14); }
+  50%     { stroke: #fde488; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Fundo animado ── */
+.login-bg-wrap {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    pointer-events: none;
+    animation: magus-glow-bg 3.4s ease-in-out infinite;
+}
+
+/* ── Header do login ── */
+.login-head {
+    text-align: center;
+    padding: 2rem 0 1.4rem;
+    animation: fadeInUp 0.5s ease-out;
+    position: relative;
+    z-index: 1;
+}
+.login-title {
+    background: linear-gradient(135deg, #c8973a 0%, #f0c060 50%, #c88030 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2.1rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+    margin: 0.6rem 0 0.4rem;
+}
+.login-subtitle {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+.login-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,151,58,0.35), transparent);
+    margin: 1rem 0 1.4rem;
+}
+
+/* ── Card da coluna central ── */
+[data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {
+    background: rgba(7, 9, 15, 0.72) !important;
+    border: 1px solid rgba(200, 151, 58, 0.16);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(200,151,58,0.07);
+    animation: fadeInUp 0.5s ease-out;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Esconde barra de dev do Streamlit ── */
+header[data-testid="stHeader"]    { display: none !important; }
+[data-testid="stStatusWidget"]    { display: none !important; }
+#MainMenu                          { display: none !important; }
+
+/* ── Campos de input ── */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input:not([type]) {
+    background: rgba(22, 28, 50, 0.95) !important;
+    border: 1px solid rgba(200, 151, 58, 0.50) !important;
+    color: #f0ece0 !important;
+    font-size: 0.95rem !important;
+    border-radius: 8px !important;
+}
+input::placeholder {
+    color: rgba(200, 185, 145, 0.80) !important;
+}
+input:focus {
+    border-color: #c8973a !important;
+    box-shadow: 0 0 0 2px rgba(200, 151, 58, 0.20) !important;
+    background: rgba(28, 35, 60, 0.98) !important;
+}
+
+/* ── Rodapé ── */
+.login-nota {
+    text-align: center;
+    color: #252a3a;
+    font-size: 0.7rem;
+    margin-top: 1rem;
+    line-height: 1.8;
+}
+
+/* ── Admin / painel ── */
 .senha-card {
     background:linear-gradient(135deg,rgba(8,22,14,.95),rgba(5,16,10,.98));
     border:1px solid rgba(42,180,85,.5); border-radius:10px;
@@ -432,20 +530,56 @@ CSS_AUTH = """
 def tela_login():
     """Exibe login/cadastro. Seta st.session_state.usuario se bem-sucedido."""
     st.markdown(CSS_AUTH, unsafe_allow_html=True)
+
+    # Símbolo MAGUS animado ao fundo (fixo, grande, baixa opacidade)
+    st.markdown("""
+    <div class="login-bg-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="640" height="640">
+        <g transform="translate(256,256)">
+          <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
+            fill="none" stroke="rgba(201,161,74,0.18)" stroke-width="22" stroke-linecap="round"/>
+          <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
+            fill="none" stroke="#c8973a" stroke-width="18" stroke-linecap="round"
+            pathLength="1000" stroke-dasharray="110 890"
+            style="animation: magus-run 2.8s linear infinite; filter: drop-shadow(0 0 14px rgba(200,151,58,0.9));"/>
+          <line x1="158" y1="-20" x2="158" y2="20" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"
+            style="animation: magus-ant 1.3s ease-in-out infinite;"/>
+          <line x1="184" y1="-11" x2="184" y2="11" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"
+            style="animation: magus-ant 1.3s ease-in-out infinite; animation-delay:0.42s;"/>
+        </g>
+      </svg>
+    </div>
+    """, unsafe_allow_html=True)
+
     _, c, _ = st.columns([1, 2, 1])
     with c:
+        # Header com logo animado menor
         st.markdown("""
         <div class="login-head">
-          <h1>⚖️ MAGUS Fiscal</h1>
-          <p>Plataforma de IA Tributária · Acesso Restrito</p>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="160" height="160"
+               style="display:block; margin:0 auto; filter:drop-shadow(0 0 24px rgba(200,151,58,0.55));">
+            <g transform="translate(256,256)">
+              <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
+                fill="none" stroke="rgba(201,161,74,0.28)" stroke-width="22" stroke-linecap="round"/>
+              <path d="M -130,0 C -130,-60 -38,-60 0,0 C 38,60 130,60 130,0 C 130,-60 38,-60 0,0 C -38,60 -130,60 -130,0"
+                fill="none" stroke="#fde488" stroke-width="22" stroke-linecap="round"
+                pathLength="1000" stroke-dasharray="110 890"
+                style="animation: magus-run 2.8s linear infinite; filter: drop-shadow(0 0 7px #f0c84a);"/>
+              <line x1="158" y1="-20" x2="158" y2="20" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"
+                style="animation: magus-ant 1.3s ease-in-out infinite;"/>
+              <line x1="184" y1="-11" x2="184" y2="11" stroke="#C9A14A" stroke-width="22" stroke-linecap="round"
+                style="animation: magus-ant 1.3s ease-in-out infinite; animation-delay:0.42s;"/>
+            </g>
+          </svg>
+          <div class="login-title">MAGUS Fiscal</div>
+          <div class="login-subtitle">Plataforma de IA Tributária · Acesso Restrito</div>
+          <div class="login-divider"></div>
         </div>
         """, unsafe_allow_html=True)
 
         aba = st.radio("", ["🔑  Entrar", "📝  Solicitar Acesso"],
                        horizontal=True, label_visibility="collapsed",
                        key="auth_aba")
-
-        st.markdown('<div class="login-box">', unsafe_allow_html=True)
 
         # ── ABA: ENTRAR
         if aba == "🔑  Entrar":
@@ -519,7 +653,6 @@ def tela_login():
                     else:
                         st.warning(res["erro"])
 
-        st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("""
         <div class="login-nota">
           MAGUS.IA · Acesso restrito a avaliadores autorizados<br>

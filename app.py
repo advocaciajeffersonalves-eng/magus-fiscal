@@ -1245,6 +1245,11 @@ CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+/* ── Esconde barra de dev / menu Streamlit ── */
+header[data-testid="stHeader"] { display: none !important; }
+[data-testid="stStatusWidget"] { display: none !important; }
+#MainMenu                       { display: none !important; }
+
 /* ── Inter font — aplicar apenas em texto, nunca em ícones ── */
 .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
 .stApp label, .stApp div[data-testid="stMarkdownContainer"],
