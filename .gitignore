@@ -7,6 +7,9 @@
 *.db
 usuarios.db
 
+# Cópias de segurança do banco — contêm dados de usuários, nunca versionar
+backups/
+
 # Ambiente virtual Python
 venv/
 .venv/
