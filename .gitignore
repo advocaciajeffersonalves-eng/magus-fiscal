@@ -2,6 +2,11 @@
 .env
 *.env
 
+# Banco de dados — contém dados de usuários (nome, email, telefone).
+# NUNCA versionar. O arquivo continua normal na pasta; só não vai pro Git/GitHub.
+*.db
+usuarios.db
+
 # Ambiente virtual Python
 venv/
 .venv/
