@@ -1,0 +1,56 @@
+{
+  "titulo": "Permuta Imobiliária",
+  "grupos": [
+    {
+      "nome": "1. Permutantes",
+      "campos": [
+        {"key": "PERMUTANTE_A_QUALIFICACAO", "label": "Permutante A — qualificação completa", "widget": "area", "placeholder": "nome/razão social, CPF/CNPJ, estado civil, endereço"},
+        {"key": "PERMUTANTE_B_QUALIFICACAO", "label": "Permutante B — qualificação completa", "widget": "area", "placeholder": "nome/razão social, CPF/CNPJ, estado civil, endereço"},
+        {"key": "CONJUGES_ANUENTES", "label": "Cônjuges anuentes (se houver)", "widget": "area"}
+      ]
+    },
+    {
+      "nome": "2. Imóveis trocados",
+      "campos": [
+        {"key": "IMOVEL_A_DESCRICAO", "label": "Imóvel do Permutante A — descrição", "widget": "area", "placeholder": "tipo, endereço, área, IPTU/CCIR"},
+        {"key": "IMOVEL_A_MATRICULA", "label": "Matrícula do imóvel A"},
+        {"key": "IMOVEL_A_CARTORIO", "label": "Cartório do imóvel A"},
+        {"key": "IMOVEL_B_DESCRICAO", "label": "Imóvel do Permutante B — descrição", "widget": "area", "placeholder": "tipo, endereço, área, IPTU/CCIR"},
+        {"key": "IMOVEL_B_MATRICULA", "label": "Matrícula do imóvel B"},
+        {"key": "IMOVEL_B_CARTORIO", "label": "Cartório do imóvel B"}
+      ]
+    },
+    {
+      "nome": "3. Valores e torna",
+      "campos": [
+        {"key": "VALOR_A", "label": "Valor atribuído ao imóvel A (R$)"},
+        {"key": "VALOR_B", "label": "Valor atribuído ao imóvel B (R$)"},
+        {"key": "TORNA_VALOR", "label": "Valor da torna (se houver)"},
+        {"key": "TORNA_DEVEDOR", "label": "Quem paga a torna", "placeholder": "ex: PERMUTANTE A"},
+        {"key": "TORNA_FORMA", "label": "Forma de pagamento da torna", "widget": "area"}
+      ]
+    },
+    {
+      "nome": "4. Prazos, posse e fechamento",
+      "campos": [
+        {"key": "PRAZO_ESCRITURA", "label": "Prazo p/ escritura (dias)", "default": "30"},
+        {"key": "POSSE_QUANDO", "label": "Quando se transfere a posse", "placeholder": "ex: no registro da escritura"},
+        {"key": "UNIDADES_FUTURAS", "label": "Unidades futuras a entregar (se aplicável)", "widget": "area"},
+        {"key": "FORO_CIDADE", "label": "Foro (comarca)"},
+        {"key": "LOCAL_DATA", "label": "Local e data", "placeholder": "ex: Goiânia, 09 de junho de 2026"}
+      ]
+    }
+  ],
+  "escolhas": [
+    {"label": "Tipo de permuta", "opcoes": [
+      {"label": "Pura (sem torna)", "modulo": "M_PERMUTA_PURA"},
+      {"label": "Com torna (diferença em dinheiro)", "modulo": "M_TORNA"}
+    ]}
+  ],
+  "toggles": [
+    {"key": "M_CONJUGE", "label": "Há cônjuge(s) anuente(s)", "default": false},
+    {"key": "M_RURAL", "label": "Imóvel(is) rural(is) (CCIR, ITR, georreferenciamento)", "default": false},
+    {"key": "M_UNIDADES_FUTURAS", "label": "Permuta por unidades futuras / área construída (incorporação)", "default": false},
+    {"key": "M_PREFERENCIA", "label": "Imóvel condominial (direito de preferência - art. 504)", "default": false}
+  ]
+}

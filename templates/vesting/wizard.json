@@ -1,0 +1,76 @@
+{
+  "titulo": "Vesting (Opção de Compra de Quotas)",
+  "grupos": [
+    {
+      "nome": "1. Identificação",
+      "campos": [
+        {"key": "SOCIEDADE_RAZAO", "label": "Razão social da Sociedade"},
+        {"key": "SOCIEDADE_CNPJ", "label": "CNPJ da Sociedade"},
+        {"key": "SOCIEDADE_MUNICIPIO", "label": "Município"},
+        {"key": "SOCIEDADE_UF", "label": "UF"},
+        {"key": "OUTORGANTES", "label": "Sócios outorgantes (nome e qualificação)", "widget": "area"},
+        {"key": "OUTORGADO_NOME", "label": "Beneficiário (nome)"},
+        {"key": "OUTORGADO_QUALIFICACAO", "label": "Qualificação do beneficiário", "placeholder": "nacionalidade, estado civil, profissão, CPF"}
+      ]
+    },
+    {
+      "nome": "2. Capital e participação",
+      "campos": [
+        {"key": "CAPITAL_SOCIAL", "label": "Capital social (R$)"},
+        {"key": "NUM_QUOTAS", "label": "Nº de quotas"},
+        {"key": "VALOR_NOMINAL", "label": "Valor nominal (R$)", "default": "1,00"},
+        {"key": "PERCENTUAL_OPCAO", "label": "% da participação", "placeholder": "ex: 5%"},
+        {"key": "QUANTIDADE_QUOTAS_OPCAO", "label": "Quantidade de quotas da opção"},
+        {"key": "PRECO_OPCAO", "label": "Preço da opção (critério)", "placeholder": "ex: 2x EBITDA, teto R$ 500k"}
+      ]
+    },
+    {
+      "nome": "3. Estrutura do vesting",
+      "campos": [
+        {"key": "CLIFF_MESES", "label": "Cliff (meses)", "default": "12"},
+        {"key": "PRAZO_VESTING_MESES", "label": "Prazo total de vesting (meses)", "default": "48"},
+        {"key": "CRONOGRAMA", "label": "Cronograma de aquisição", "placeholder": "ex: 25% ao ano após o cliff"},
+        {"key": "PARCELAS_RECOMPRA", "label": "Parcelas da recompra", "default": "24 (vinte e quatro) vezes"},
+        {"key": "RECOMPRA_SEM_JC", "label": "Recompra — dispensa sem justa causa"},
+        {"key": "RECOMPRA_VOLUNTARIA", "label": "Recompra — saída voluntária", "placeholder": "ex: 3x EBITDA, teto R$ 1M"}
+      ]
+    },
+    {
+      "nome": "4. Restrições",
+      "campos": [
+        {"key": "NAO_COMPETE_ANOS", "label": "Não-competição — período após saída", "default": "5 (cinco) anos"},
+        {"key": "NAO_COMPETE_MULTA", "label": "Não-competição — multa", "placeholder": "ex: 100x a última remuneração"},
+        {"key": "CONFIDENCIALIDADE_ANOS", "label": "Confidencialidade — prazo após o fim", "default": "5 (cinco) anos"},
+        {"key": "CONFIDENCIALIDADE_MULTA", "label": "Confidencialidade — multa (R$)"}
+      ]
+    },
+    {
+      "nome": "5. Foro e fechamento",
+      "campos": [
+        {"key": "CAMARA_ARBITRAL", "label": "Câmara arbitral", "default": "CAMARB"},
+        {"key": "SEDE_ARBITRAGEM", "label": "Sede da arbitragem", "placeholder": "ex: Goiânia/GO"},
+        {"key": "FORO", "label": "Comarca / Lei e foro (se judicial ou internacional)"},
+        {"key": "CIDADE_DATA", "label": "Cidade e data de assinatura"}
+      ]
+    }
+  ],
+  "escolhas": [
+    {"label": "Perfil do beneficiário", "opcoes": [
+      {"label": "Colaborador/sócio interno (cliff + metas)", "modulo": "M_INTERNO"},
+      {"label": "Consultor/investidor externo (vesting imediato)", "modulo": "M1_VESTING_IMEDIATO"}
+    ]},
+    {"label": "Resolução de conflitos", "opcoes": [
+      {"label": "Arbitragem (CAMARB)", "modulo": "FORO_ARBITRAGEM"},
+      {"label": "Foro judicial", "modulo": "FORO_JUDICIAL"},
+      {"label": "Internacional", "modulo": "FORO_INTERNACIONAL"}
+    ]}
+  ],
+  "toggles": [
+    {"key": "M2_ANTIDILUICAO", "label": "A empresa vai captar investimento / fazer rodadas (anti-diluição)", "default": false},
+    {"key": "M3_ACELERACAO", "label": "Proteger o beneficiário se a empresa for vendida (aceleração)", "default": false},
+    {"key": "M4_TAG_ALONG", "label": "Direito de vender junto com os majoritários (tag along)", "default": false},
+    {"key": "M5_DIREITOS_ECONOMICOS", "label": "Recebe dividendos desde já + blindagem patrimonial", "default": false},
+    {"key": "M6_CAUSA_GOOD_REASON", "label": "Usar critérios objetivos de 'Causa' e 'Good Reason'", "default": false},
+    {"key": "M_CESSAO_PI", "label": "O beneficiário cria conteúdo/PI para a empresa (cessão de PI)", "default": true}
+  ]
+}

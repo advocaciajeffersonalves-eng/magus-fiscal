@@ -3,12 +3,14 @@ MAGUS Fiscal — Módulo: Gerador de Contratos v2
 Experiência inteligente com dois modos: Qualificado e Completo.
 """
 
-import io, os, tempfile, anthropic
+import io, os, re, tempfile, anthropic
 import streamlit as st
 from datetime import datetime
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+import templates_engine as te
+import rag_local as rag
 
 # ─── DADOS ──────────────────────────────────────────────────────────────────
 
@@ -43,7 +45,25 @@ TIPOS_CONTRATO = {
     "🌐  Independent Contractor (EUA)": "Prestador autônomo sob lei americana.",
     "🏢  Acordo de Sócios":             "Direitos e obrigações entre sócios.",
     "🏛️  Holding Familiar":             "Estrutura de holding para proteção patrimonial e sucessória.",
+    "📈  Vesting":                       "Opção de compra de quotas por tempo/metas — modelo guiado por perguntas (econômico).",
+    "🏘️  Compra e Venda de Imóvel":      "Imóvel urbano/rural, à vista ou parcelado — modelo guiado por perguntas (econômico).",
+    "🔁  Permuta Imobiliária":           "Troca de imóveis, com ou sem torna — modelo guiado por perguntas (econômico).",
+    "🌾  Contrato Agrário":              "Arrendamento, parceria, comodato ou pastoreio rural — modelo guiado por perguntas (econômico).",
 }
+
+# Inclui dinamicamente os modelos descobertos no banco (curados + gerados pelo
+# modelo local) que ainda não estão no catálogo acima. Assim, gerar novas famílias
+# não exige mexer no código — a ferramenta passa a oferecê-las sozinha.
+def _merge_descobertos():
+    try:
+        ja = " ".join(TIPOS_CONTRATO.keys()).lower()
+        for titulo in te.descobrir():
+            base = titulo.split("·")[-1].strip().lower()
+            if base and base not in ja and titulo.lower() not in ja:
+                TIPOS_CONTRATO[f"📄  {titulo}"] = "Modelo gerado do seu acervo — guiado por perguntas (revisar)."
+    except Exception:
+        pass
+_merge_descobertos()
 AVISO = (
     "⚠️ **Aviso Jurídico:** Minuta gerada por IA com caráter informativo e preliminar. "
     "Não substitui advogado inscrito na OAB ou *attorney* licenciado. Revise com profissional antes de assinar."
@@ -98,47 +118,105 @@ def _reset():
 
 # ─── EXPORTAÇÃO DOCX ────────────────────────────────────────────────────────
 
+# Remove emojis e símbolos decorativos do texto.
+_EMOJI_RE = re.compile(
+    "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U00002190-\U000021FF"
+    "\U00002B00-\U00002BFF\U0001F1E6-\U0001F1FF\U00002300-\U000023FF️]"
+)
+
+# Linhas que são apenas traços/sinais de separação (── --- === ***).
+def _e_separador(s: str) -> bool:
+    return bool(s) and set(s) <= set("-=_~—–─━•*·.… ")
+
+# Heading que inicia a seção final de orientações: corta dali em diante
+# (essas observações ficam só na tela do app, não no documento entregue).
+def _inicio_orientacao(s: str) -> bool:
+    low = s.lower().lstrip("# *").strip()
+    return low.startswith(("pontos de atenção", "pontos de atencao",
+                           "campos para completar", "campos a completar"))
+
+# Resíduo de rótulo/aviso da ferramenta numa linha avulsa: pula só ela.
+def _e_residuo_ferramenta(s: str) -> bool:
+    low = s.lower().lstrip("# *").strip()
+    return low.startswith(("aviso:", "minuta gerada", "gerado por",
+                           "magus fiscal — gerador", "magus fiscal - gerador"))
+
+# Escreve o texto num parágrafo convertendo **negrito** em formatação real.
+def _escrever_inline(p, texto: str):
+    texto = _EMOJI_RE.sub("", texto).strip()
+    for parte in re.split(r"(\*\*.+?\*\*)", texto):
+        if not parte:
+            continue
+        if parte.startswith("**") and parte.endswith("**"):
+            p.add_run(parte[2:-2]).bold = True
+        else:
+            p.add_run(parte)
+
+
 def _gerar_docx(minuta: str, tipo: str, jurisdicao: str, estado: str) -> bytes:
     doc = Document()
     sec = doc.sections[0]
-    sec.left_margin = sec.right_margin = Inches(1.2)
+    sec.left_margin = sec.right_margin = Inches(1.18)
     sec.top_margin  = sec.bottom_margin = Inches(1.0)
 
-    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("MAGUS FISCAL — GERADOR DE CONTRATOS")
-    r.bold = True; r.font.size = Pt(9); r.font.color.rgb = RGBColor(0x0A,0x1A,0x4A)
+    # Tipografia formal padrão (serifada, corpo 12), texto preto.
+    normal = doc.styles["Normal"]
+    normal.font.name = "Times New Roman"
+    normal.font.size = Pt(12)
+    normal.font.color.rgb = RGBColor(0, 0, 0)
+    normal.paragraph_format.space_after = Pt(6)
+    normal.paragraph_format.line_spacing = 1.15
 
-    doc.add_paragraph("─"*70)
+    for raw in minuta.split("\n"):
+        s = raw.strip()
 
-    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run(tipo.split("  ")[-1].upper())
-    r.bold = True; r.font.size = Pt(14); r.font.color.rgb = RGBColor(0x0A,0x1A,0x4A)
+        # Separadores e resíduos da ferramenta saem; a seção de orientação
+        # final corta o documento (fica só na tela do app).
+        if _e_separador(s) or _e_residuo_ferramenta(s):
+            continue
+        if _inicio_orientacao(s):
+            break
+        if not s:
+            doc.add_paragraph("")
+            continue
 
-    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run(f"Jurisdição: {jurisdicao}{f' — {estado}' if estado else ''}")
-    r.italic = True; r.font.size = Pt(10)
+        # Título do contrato:  # ...
+        if re.match(r"#\s+\S", s) and not s.startswith("##"):
+            p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            r = p.add_run(_EMOJI_RE.sub("", s.lstrip("# ").strip()).upper())
+            r.bold = True; r.font.size = Pt(13)
+            p.paragraph_format.space_before = Pt(4); p.paragraph_format.space_after = Pt(16)
+            continue
 
-    doc.add_paragraph("")
-    p = doc.add_paragraph()
-    r = p.add_run("AVISO: Minuta gerada por IA — caráter informativo e preliminar. "
-                  "Não substitui aconselhamento jurídico. Revise com profissional habilitado.")
-    r.font.size = Pt(8); r.italic = True; r.font.color.rgb = RGBColor(0x80,0x00,0x00)
-    doc.add_paragraph("")
+        # Cabeçalho de cláusula:  ## CLÁUSULA ...
+        if s.startswith("## "):
+            p = doc.add_paragraph()
+            r = p.add_run(_EMOJI_RE.sub("", s[3:].strip()).upper())
+            r.bold = True; r.font.size = Pt(12)
+            p.paragraph_format.space_before = Pt(14); p.paragraph_format.space_after = Pt(6)
+            p.paragraph_format.keep_with_next = True
+            continue
 
-    for linha in minuta.split("\n"):
-        p = doc.add_paragraph(); l = linha.strip()
-        if l.startswith("CLÁUSULA") or l.startswith("CLAUSE") or (l.startswith("**") and l.endswith("**")):
-            r = p.add_run(l.replace("**","")); r.bold = True; r.font.size = Pt(11)
-        elif l.startswith("⚠️") or "PONTOS DE ATENÇÃO" in l:
-            r = p.add_run(l); r.bold = True; r.font.color.rgb = RGBColor(0xCC,0x44,0x00)
-        else:
-            p.add_run(l)
-        p.paragraph_format.space_after = Pt(4)
+        # Subtítulo:  ### ...
+        if s.startswith("### "):
+            p = doc.add_paragraph()
+            p.add_run(_EMOJI_RE.sub("", s[4:].strip())).bold = True
+            p.paragraph_format.space_before = Pt(10); p.paragraph_format.space_after = Pt(4)
+            continue
 
-    doc.add_paragraph("")
-    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run(f"Gerado por MAGUS Fiscal em {datetime.now().strftime('%d/%m/%Y às %H:%M')}")
-    r.font.size = Pt(8); r.italic = True; r.font.color.rgb = RGBColor(0x80,0x80,0x80)
+        # Alíneas (a), b)...) e bullets: alinhadas à esquerda com leve recuo.
+        item = re.match(r"^[-*]\s+(.*)", s)
+        if item or re.match(r"^[a-z]\)\s", s):
+            p = doc.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.left_indent = Inches(0.4)
+            _escrever_inline(p, item.group(1) if item else s)
+            continue
+
+        # Parágrafo comum: justificado.
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        _escrever_inline(p, s)
 
     buf = io.BytesIO(); doc.save(buf); buf.seek(0)
     return buf.read()
@@ -168,11 +246,12 @@ Modo: {'QUALIFICADO (com lacunas indicadas)' if modo=='qualificado' else 'COMPLE
 
 REGRAS:
 1. {qualif_instr}
-2. Estrutura: cabeçalho → qualificação → CLÁUSULA PRIMEIRA, SEGUNDA... → assinaturas → PONTOS DE ATENÇÃO
-3. Marque cláusulas de alto risco com ⚠️
-4. Nunca afirme que o contrato é "válido" ou "garantido"
-5. Sempre recomende revisão por advogado habilitado
-6. Responda em português do Brasil"""
+2. Estrutura: título do contrato → qualificação das partes → CLÁUSULA PRIMEIRA, SEGUNDA... → fecho e assinaturas → seção final "PONTOS DE ATENÇÃO"
+3. Formatação: use Markdown estrutural — "# Título do Contrato", "## CLÁUSULA PRIMEIRA – DO OBJETO", "**termo em destaque**". NÃO use emojis, ícones, símbolos decorativos nem linhas de separação (---). Linguagem jurídica formal, impessoal, pronta para apresentação.
+4. O corpo do contrato (até as assinaturas) deve ser um texto limpo e apresentável, sem qualquer menção a IA, geração automática ou disclaimers.
+5. Coloque toda orientação ao usuário (riscos, recomendação de revisão por advogado, ressalvas) EXCLUSIVAMENTE na seção final "PONTOS DE ATENÇÃO", nunca no corpo das cláusulas.
+6. Nunca afirme que o contrato é "válido" ou "garantido"
+7. Responda em português do Brasil"""
 
 def _system_entrevistador(tipo: str, jur: str, estado: str) -> str:
     return f"""Você é um assistente especialista em coleta de informações para elaboração de contratos.
@@ -529,7 +608,9 @@ O contrato precisará definir: **qual lei rege** (brasileira ou americana), **on
         st.session_state.ct_tipo   = tipo
         st.session_state.ct_jur    = jur
         st.session_state.ct_estado = estado
-        st.session_state.ct_fase   = "coleta"
+        # Tipos com modelo no banco usam o wizard guiado (template-first, econômico);
+        # os demais seguem a geração por IA do zero.
+        st.session_state.ct_fase   = "wizard" if te.tem_template(tipo) else "coleta"
         st.rerun()
 
 # ─── ABA DE ÁUDIO INTELIGENTE (compartilhada) ────────────────────────────────
@@ -844,12 +925,13 @@ def _gerar_e_mostrar(modo: str):
             contexto += f"[{papel}]: {msg['content']}\n\n"
 
     system = _system_gerador(tipo, jur, estado, modo)
+    embasamento = rag.contexto(f"{tipo} {contexto[:300]}")  # doutrina relevante (local, grátis)
     prompt = (
         f"Tipo de contrato: {tipo}\n"
         f"Jurisdição: {jur}{f' — {estado}' if estado else ''}\n"
         f"Modo: {modo.upper()}\n"
         f"Data de referência: {datetime.now().strftime('%d/%m/%Y')}\n\n"
-        f"{contexto}\n\n"
+        f"{contexto}{embasamento}\n\n"
         f"Gere a minuta contratual completa agora."
     )
 
@@ -859,8 +941,8 @@ def _gerar_e_mostrar(modo: str):
     minuta_chunks = []
 
     with _claude().messages.stream(
-        model="claude-opus-4-7",
-        max_tokens=32000,
+        model="claude-sonnet-4-6",
+        max_tokens=12000,
         system=system,
         messages=[{"role": "user", "content": prompt}]
     ) as stream:
@@ -873,6 +955,69 @@ def _gerar_e_mostrar(modo: str):
     st.session_state.ct_minuta = minuta
     st.session_state.ct_fase   = "resultado"
     st.rerun()
+
+# ─── TELA WIZARD (template-first, guiado por perguntas) ──────────────────────
+
+def _tela_wizard():
+    tipo = st.session_state.ct_tipo
+    wz = te.carregar_wizard(tipo)
+    titulo = wz.get("titulo", tipo.split("  ")[-1])
+    st.markdown(f"""
+    <div style='background:linear-gradient(90deg,#0a1a4a,#1a3a7a);padding:16px 24px;
+    border-radius:10px;margin-bottom:18px'>
+    <h2 style='color:white;margin:0'>📄 {titulo} — Assistente Guiado</h2>
+    <span style='color:#9fb8e8;font-size:.85rem'>Responda as perguntas; o modelo é montado na hora, sem custo de IA.</span>
+    </div>""", unsafe_allow_html=True)
+
+    if st.button("← Voltar", key="back_wizard"):
+        st.session_state.ct_fase = "tipo"; st.rerun()
+
+    if not wz:
+        st.error("Definição do assistente não encontrada para este tipo."); return
+
+    with st.form("wizard_form"):
+        valores = {}
+        for gi, grupo in enumerate(wz.get("grupos", [])):
+            st.markdown(f"##### {grupo['nome']}")
+            campos = grupo.get("campos", [])
+            cols = st.columns(2)
+            for i, campo in enumerate(campos):
+                with cols[i % 2]:
+                    k = campo["key"]; label = campo["label"]
+                    widget = campo.get("widget", "text")
+                    default = campo.get("default", ""); ph = campo.get("placeholder", "")
+                    if widget == "area":
+                        valores[k] = st.text_area(label, value=default, placeholder=ph, key=f"wz_{k}", height=80)
+                    elif widget == "select":
+                        valores[k] = st.selectbox(label, campo.get("options", []), key=f"wz_{k}")
+                    else:
+                        valores[k] = st.text_input(label, value=default, placeholder=ph, key=f"wz_{k}")
+
+        escolhas_sel = []
+        if wz.get("escolhas"):
+            st.markdown("##### Opções principais")
+            for idx, esc in enumerate(wz["escolhas"]):
+                labels = [o["label"] for o in esc["opcoes"]]
+                sel = st.radio(esc["label"], labels, key=f"wz_esc_{idx}")
+                mod = next(o["modulo"] for o in esc["opcoes"] if o["label"] == sel)
+                escolhas_sel.append(mod)
+
+        toggles_sel = []
+        if wz.get("toggles"):
+            st.markdown("##### Cláusulas opcionais (ligue o que se aplica)")
+            for tg in wz["toggles"]:
+                if st.checkbox(tg["label"], value=tg.get("default", False), key=f"wz_tg_{tg['key']}"):
+                    toggles_sel.append(tg["key"])
+
+        ok = st.form_submit_button("⚙️ Gerar contrato", type="primary", use_container_width=True)
+
+    if ok:
+        modulos = set(escolhas_sel) | set(toggles_sel)
+        minuta = te.renderizar(te.carregar_template(tipo), valores, modulos)
+        st.session_state.ct_minuta = minuta
+        st.session_state.ct_fase   = "resultado"
+        st.rerun()
+
 
 # ─── TELA RESULTADO ──────────────────────────────────────────────────────────
 
@@ -911,6 +1056,44 @@ def _tela_resultado():
     with col3:
         if st.button("🔄 Novo contrato", use_container_width=True, key="btn_novo"):
             _reset(); st.rerun()
+
+    # ── Ajustar com IA (refinamento conversacional pós-geração) ──────────────
+    st.markdown("---")
+    st.markdown("#### ✏️ Ajustar com IA")
+    st.caption('Peça ajustes em português — ex: *"aumente a multa para 20%"*, '
+               '*"adicione cláusula de reajuste anual pelo IPCA"*, *"deixe mais favorável ao vendedor"*.')
+    pedido = st.text_area("O que você quer ajustar?", key="ajuste_pedido",
+                          height=90, label_visibility="collapsed",
+                          placeholder="Descreva o ajuste desejado...")
+    if st.button("⚙️ Aplicar ajustes", key="btn_ajustar"):
+        if pedido and pedido.strip():
+            with st.spinner("Revisando o contrato com IA..."):
+                try:
+                    st.session_state.ct_minuta = _refinar_minuta(minuta, pedido)
+                    st.toast("Ajustes aplicados!", icon="✅")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Não foi possível ajustar agora: {e}")
+        else:
+            st.warning("Escreva o ajuste que você quer antes de aplicar.")
+
+
+def _refinar_minuta(minuta: str, pedido: str) -> str:
+    """Aplica um ajuste pedido em linguagem natural ao contrato, via IA (Sonnet)."""
+    system = (
+        "Você é um advogado revisor de contratos. Receberá um contrato e um pedido de ajuste. "
+        "Reescreva o contrato COMPLETO aplicando exatamente o ajuste solicitado, preservando "
+        "todo o resto: estrutura, numeração das cláusulas, qualificação das partes e linguagem "
+        "jurídica formal. Não use emojis, não use títulos em markdown (#) e não adicione "
+        "comentários, avisos ou menção a IA — devolva apenas o texto do contrato revisado."
+    )
+    prompt = (f"CONTRATO ATUAL:\n{minuta}\n\n"
+              f"AJUSTE SOLICITADO:\n{pedido}{rag.contexto(pedido)}\n\n"
+              f"Devolva o contrato completo já revisado.")
+    resp = _claude().messages.create(
+        model="claude-sonnet-4-6", max_tokens=12000,
+        system=system, messages=[{"role": "user", "content": prompt}])
+    return resp.content[0].text.strip()
 
 # ─── EXTRAÇÃO DE ARQUIVO ─────────────────────────────────────────────────────
 
@@ -951,5 +1134,7 @@ def render_contratos():
             _tela_coleta_completo()
     elif fase == "perguntas":
         _tela_perguntas()
+    elif fase == "wizard":
+        _tela_wizard()
     elif fase == "resultado":
         _tela_resultado()

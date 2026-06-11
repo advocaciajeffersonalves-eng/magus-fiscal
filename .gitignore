@@ -31,3 +31,21 @@ __pycache__/
 # Arquivos temporários e de teste
 teste_*.csv
 *.log
+
+# === Banco de contratos — dados sigilosos de clientes (NUNCA versionar) ===
+templates/_originais
+templates/_originais/
+templates/_trabalho/
+templates/**/_originais
+
+# Rascunhos de templates (podem conter resíduos até revisão)
+templates/_rascunhos/
+
+# Templates gerados pelo modelo local (rascunhos até curadoria)
+templates/_gerados/
+templates/_doutrina/
+
+# Backups — nunca versionar (podem conter segredos)
+.env.*
+*.bak-*
+*.bak

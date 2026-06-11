@@ -139,7 +139,7 @@ def enviar_email_acesso(nome: str, email_destino: str, senha: str) -> dict:
         <p style="color:#aaa;">Seu acesso foi <strong style="color:#48c870;">aprovado</strong>. Use as credenciais abaixo:</p>
         <div style="background:#0e1117;border:1px solid #c8973a;border-radius:8px;padding:1.2rem;margin:1.5rem 0;text-align:center;">
           <p style="color:#888;font-size:.8rem;margin:0 0 .4rem;">🔗 Endereço de acesso</p>
-          <a href="https://app.magusfiscal.com.br" style="color:#c8973a;font-size:1.1rem;font-weight:700;text-decoration:none;">app.magusfiscal.com.br</a>
+          <a href="https://magusfiscal.com.br" style="color:#c8973a;font-size:1.1rem;font-weight:700;text-decoration:none;">magusfiscal.com.br</a>
         </div>
         <div style="background:#0e1117;border:1px solid rgba(200,151,58,.3);border-radius:8px;padding:1.2rem;margin:1rem 0;">
           <p style="color:#888;font-size:.8rem;margin:0 0 .3rem;">📧 E-mail de acesso</p>
@@ -154,7 +154,7 @@ def enviar_email_acesso(nome: str, email_destino: str, senha: str) -> dict:
           Se precisar de nova senha, entre em contato com a equipe MAGUS.
         </p>
         <div style="margin-top:1.5rem;text-align:center;">
-          <a href="https://app.magusfiscal.com.br" style="background:linear-gradient(135deg,#c8973a,#e6b85c);color:#0a0a0f;padding:.8rem 2rem;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">
+          <a href="https://magusfiscal.com.br" style="background:linear-gradient(135deg,#c8973a,#e6b85c);color:#0a0a0f;padding:.8rem 2rem;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">
             → Acessar agora
           </a>
         </div>

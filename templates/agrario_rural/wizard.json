@@ -1,0 +1,53 @@
+{
+  "titulo": "Contrato Agrário / Rural",
+  "grupos": [
+    {
+      "nome": "1. Partes",
+      "campos": [
+        {"key": "CEDENTE_QUALIFICACAO", "label": "Cedente/Proprietário — qualificação", "widget": "area", "placeholder": "nome/razão social, CPF/CNPJ, estado civil, endereço"},
+        {"key": "EXPLORADOR_QUALIFICACAO", "label": "Explorador — qualificação", "widget": "area", "placeholder": "quem vai usar/explorar a terra"},
+        {"key": "EXPLORADOR_DENOMINACAO", "label": "Denominação do explorador", "placeholder": "ARRENDATÁRIO / PARCEIRO / COMODATÁRIO / PASTOREADOR"}
+      ]
+    },
+    {
+      "nome": "2. Imóvel rural",
+      "campos": [
+        {"key": "IMOVEL_DESCRICAO", "label": "Descrição do imóvel rural", "widget": "area", "placeholder": "nome da fazenda/sítio, localização"},
+        {"key": "AREA", "label": "Área", "placeholder": "ex: 50 hectares"},
+        {"key": "MATRICULA", "label": "Matrícula nº"},
+        {"key": "CARTORIO", "label": "Cartório de Registro de Imóveis"},
+        {"key": "CCIR", "label": "CCIR nº"},
+        {"key": "ITR", "label": "Inscrição ITR nº"},
+        {"key": "FINALIDADE", "label": "Finalidade da exploração", "placeholder": "ex: lavoura de soja / pecuária de corte"}
+      ]
+    },
+    {
+      "nome": "3. Regime (preencha conforme a natureza escolhida abaixo)",
+      "campos": [
+        {"key": "TITULO_NATUREZA", "label": "Título do contrato", "placeholder": "ex: DE ARRENDAMENTO RURAL / DE PARCERIA AGRÍCOLA"},
+        {"key": "REMUNERACAO", "label": "Remuneração / partilha", "placeholder": "arrendamento: R$/ano · parceria: % da produção · pastoreio: R$/cabeça/mês"},
+        {"key": "FORMA_PAGAMENTO", "label": "Forma de pagamento (arrendamento)", "placeholder": "ex: anualmente, até 31/12"},
+        {"key": "LOTACAO", "label": "Capacidade de lotação (pastoreio)", "placeholder": "ex: 1 UA/ha"}
+      ]
+    },
+    {
+      "nome": "4. Prazo e fechamento",
+      "campos": [
+        {"key": "PRAZO", "label": "Prazo de vigência", "placeholder": "ex: 3 (três) anos"},
+        {"key": "DATA_INICIO", "label": "Data de início"},
+        {"key": "PURGA_MORA_DIAS", "label": "Prazo p/ purgar mora (dias)", "default": "15"},
+        {"key": "FORO_CIDADE", "label": "Foro (comarca da situação do imóvel)"},
+        {"key": "LOCAL_DATA", "label": "Local e data", "placeholder": "ex: Goiânia, 09 de junho de 2026"}
+      ]
+    }
+  ],
+  "escolhas": [
+    {"label": "Natureza do contrato", "opcoes": [
+      {"label": "Arrendamento rural (aluguel)", "modulo": "M_ARRENDAMENTO"},
+      {"label": "Parceria rural (partilha de frutos)", "modulo": "M_PARCERIA"},
+      {"label": "Comodato rural (gratuito)", "modulo": "M_COMODATO"},
+      {"label": "Pastoreio (uso de pasto)", "modulo": "M_PASTOREIO"}
+    ]}
+  ],
+  "toggles": []
+}

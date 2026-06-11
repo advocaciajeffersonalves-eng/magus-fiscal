@@ -1,0 +1,82 @@
+{
+  "titulo": "Compra e Venda de Imóvel",
+  "grupos": [
+    {
+      "nome": "1. Partes",
+      "campos": [
+        {"key": "VENDEDOR_QUALIFICACAO", "label": "Vendedor — qualificação completa", "widget": "area", "placeholder": "nome, nacionalidade, estado civil, regime de bens, profissão, RG, CPF, endereço"},
+        {"key": "COMPRADOR_QUALIFICACAO", "label": "Comprador — qualificação completa", "widget": "area", "placeholder": "nome, nacionalidade, estado civil, regime de bens, profissão, RG, CPF, endereço"},
+        {"key": "CONJUGE_ANUENTE", "label": "Cônjuge anuente (se houver)", "widget": "area", "placeholder": "qualificação do cônjuge — só se marcou a opção abaixo"}
+      ]
+    },
+    {
+      "nome": "2. Imóvel",
+      "campos": [
+        {"key": "IMOVEL_DESCRICAO", "label": "Descrição do imóvel", "placeholder": "ex: Casa / Apartamento / Terreno / Sala comercial"},
+        {"key": "IMOVEL_ENDERECO", "label": "Endereço completo"},
+        {"key": "IMOVEL_CIDADE_UF", "label": "Cidade/UF"},
+        {"key": "IMOVEL_AREA", "label": "Área total", "placeholder": "ex: 120 m²"},
+        {"key": "IMOVEL_MATRICULA", "label": "Matrícula nº"},
+        {"key": "IMOVEL_CARTORIO", "label": "Cartório de Registro de Imóveis"},
+        {"key": "IMOVEL_IPTU", "label": "Inscrição municipal (IPTU)"},
+        {"key": "ORIGEM_AQUISICAO", "label": "Como o vendedor adquiriu", "placeholder": "ex: Escritura Pública de Compra e Venda, Livro X, Fls. Y"}
+      ]
+    },
+    {
+      "nome": "3. Preço e pagamento",
+      "campos": [
+        {"key": "PRECO", "label": "Preço (R$)"},
+        {"key": "PRECO_EXTENSO", "label": "Preço por extenso"},
+        {"key": "SINAL", "label": "Sinal/entrada (se parcelado)"},
+        {"key": "SALDO_PAGAMENTO", "label": "Saldo — forma de pagamento (se parcelado)", "widget": "area"},
+        {"key": "INDICE_REAJUSTE", "label": "Índice de reajuste", "widget": "select", "options": ["IGP-M", "IPCA", "INPC"]},
+        {"key": "MULTA_MORA", "label": "Multa por atraso", "default": "2%"},
+        {"key": "ITBI_MUNICIPIO", "label": "Município do ITBI"}
+      ]
+    },
+    {
+      "nome": "4. Posse, prazos e penalidade",
+      "campos": [
+        {"key": "POSSE_QUANDO", "label": "Quando se transfere a posse", "placeholder": "ex: neste ato / após quitação"},
+        {"key": "PRAZO_ESCRITURA", "label": "Prazo p/ escritura (dias)", "default": "30"},
+        {"key": "PRAZO_REGISTRO", "label": "Prazo p/ registro (dias)", "default": "30"},
+        {"key": "PURGA_MORA_DIAS", "label": "Prazo p/ purgar mora (dias)", "default": "15"},
+        {"key": "PENAL_RETENCAO", "label": "Retenção em caso de inadimplência do comprador", "default": "10% a 25%"}
+      ]
+    },
+    {
+      "nome": "5. Campos de módulos específicos (preencha se aplicável)",
+      "campos": [
+        {"key": "CCIR", "label": "CCIR (imóvel rural)"},
+        {"key": "FRACAO_IDEAL", "label": "Fração ideal (ex: 1/2)"},
+        {"key": "PRAZO_ENTREGA", "label": "Prazo de entrega (imóvel em construção)"}
+      ]
+    },
+    {
+      "nome": "6. Foro e fechamento",
+      "campos": [
+        {"key": "FORO_CIDADE", "label": "Foro (comarca)"},
+        {"key": "LOCAL_DATA", "label": "Local e data", "placeholder": "ex: Goiânia, 09 de junho de 2026"}
+      ]
+    }
+  ],
+  "escolhas": [
+    {"label": "Natureza do negócio", "opcoes": [
+      {"label": "Definitivo (compra e venda)", "modulo": "M_DEFINITIVO"},
+      {"label": "Promessa (preliminar)", "modulo": "M_PROMESSA"}
+    ]},
+    {"label": "Forma de pagamento", "opcoes": [
+      {"label": "À vista", "modulo": "M_AVISTA"},
+      {"label": "Parcelado", "modulo": "M_PARCELADO"}
+    ]}
+  ],
+  "toggles": [
+    {"key": "M_CONJUGE", "label": "Há cônjuge anuente (vendedor/comprador casado)", "default": false},
+    {"key": "M_ALIENACAO_FIDUCIARIA", "label": "Com garantia de alienação fiduciária", "default": false},
+    {"key": "M_RURAL", "label": "Imóvel rural (CCIR, ITR, georreferenciamento)", "default": false},
+    {"key": "M_FRACAO_IDEAL", "label": "Venda de fração ideal", "default": false},
+    {"key": "M_CONSTRUCAO", "label": "Imóvel em construção", "default": false},
+    {"key": "M_INCORPORACAO", "label": "Área para incorporação imobiliária", "default": false},
+    {"key": "M_CESSAO_DIREITOS", "label": "Permite cessão de direitos aquisitivos", "default": true}
+  ]
+}

@@ -1726,6 +1726,24 @@ with st.sidebar:
         type="primary" if st.session_state.modulo == "contratos" else "secondary",
         use_container_width=True
     )
+    btn_defesas = st.button(
+        "⚖️  Gerador de Defesas",
+        key="btn_mod_defesas",
+        type="primary" if st.session_state.modulo == "defesas" else "secondary",
+        use_container_width=True
+    )
+    btn_clientes = st.button(
+        "👥  Meus Clientes",
+        key="btn_mod_clientes",
+        type="primary" if st.session_state.modulo == "clientes" else "secondary",
+        use_container_width=True
+    )
+    btn_dash = st.button(
+        "📊  Painel",
+        key="btn_mod_dash",
+        type="primary" if st.session_state.modulo == "dashboard" else "secondary",
+        use_container_width=True
+    )
 
     # ── Info do usuário logado ────────────────────────────
     usr = st.session_state.get("usuario", {})
@@ -1778,6 +1796,18 @@ if btn_contratos and st.session_state.modulo != "contratos":
     st.session_state.modulo = "contratos"
     st.session_state.resultado = None
     st.rerun()
+if btn_defesas and st.session_state.modulo != "defesas":
+    st.session_state.modulo = "defesas"
+    st.session_state.resultado = None
+    st.rerun()
+if btn_clientes and st.session_state.modulo != "clientes":
+    st.session_state.modulo = "clientes"
+    st.session_state.resultado = None
+    st.rerun()
+if btn_dash and st.session_state.modulo != "dashboard":
+    st.session_state.modulo = "dashboard"
+    st.session_state.resultado = None
+    st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MÓDULO CONTRATOS
@@ -1797,6 +1827,164 @@ if st.session_state.modulo == "troca_senha":
 
 if st.session_state.modulo == "contratos":
     render_contratos()
+    st.stop()
+
+if st.session_state.modulo == "dashboard":
+    import crm
+    import sqlite3
+    crm.init_crm()
+    _uidD = st.session_state.get("usuario", {}).get("id", 0)
+    _cl = crm.listar_clientes(_uidD)
+    _tot = sum(c["n_servicos"] for c in _cl)
+    st.markdown("""
+    <div class="banner-transicao">
+      <div class="banner-transicao-titulo">📊 &nbsp; Painel do Escritório</div>
+      <div class="banner-transicao-texto">Visão geral da sua carteira de clientes e serviços. (Demonstração.)</div>
+    </div>
+    """, unsafe_allow_html=True)
+    _m1, _m2, _m3 = st.columns(3)
+    _m1.metric("Clientes", len(_cl))
+    _m2.metric("Serviços registrados", _tot)
+    _m3.metric("Média por cliente", round(_tot / len(_cl), 1) if _cl else 0)
+    _rows = sqlite3.connect(crm.DB_PATH).execute(
+        "SELECT h.tipo, COUNT(*) FROM historico h JOIN clientes c ON c.id=h.cliente_id "
+        "WHERE c.profissional=? GROUP BY h.tipo ORDER BY 2 DESC", (_uidD,)).fetchall()
+    if _rows:
+        st.markdown("#### Serviços por tipo")
+        for _t, _n in _rows:
+            st.markdown(f"- **{_t}**: {_n}")
+    if _cl:
+        st.markdown("#### Carteira de clientes")
+        for _c in _cl[:12]:
+            st.markdown(f"- {_c['nome']} — {_c['n_servicos']} serviço(s)")
+    else:
+        st.info("Cadastre clientes em **👥 Meus Clientes** e gere documentos — o painel preenche sozinho.")
+    st.stop()
+
+if st.session_state.modulo == "clientes":
+    import crm
+    crm.init_crm()
+    _uid = st.session_state.get("usuario", {}).get("id", 0)
+    st.markdown("""
+    <div class="banner-transicao">
+      <div class="banner-transicao-titulo">👥 &nbsp; Meus Clientes — Carteira e Histórico</div>
+      <div class="banner-transicao-texto">
+        Cadastre seus clientes e acompanhe os <strong style="color:#5a80a8;">serviços e documentos</strong> de cada um
+        num só lugar. (Demonstração — use dados fictícios.)
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+    with st.expander("➕ Cadastrar novo cliente"):
+        with st.form("form_cliente_novo"):
+            _cc1, _cc2 = st.columns(2)
+            with _cc1:
+                _cn = st.text_input("Nome / Razão social")
+                _cdoc = st.text_input("CPF / CNPJ")
+                _ctp = st.selectbox("Tipo", ["PF", "PJ"])
+            with _cc2:
+                _cem = st.text_input("E-mail")
+                _ctel = st.text_input("Telefone")
+                _cob = st.text_input("Observação")
+            if st.form_submit_button("Salvar cliente", type="primary"):
+                if _cn.strip():
+                    crm.criar_cliente(_uid, _cn, _cdoc, _cem, _ctel, _ctp, _cob)
+                    st.success("Cliente cadastrado!"); st.rerun()
+                else:
+                    st.warning("Informe ao menos o nome.")
+    _clientes = crm.listar_clientes(_uid)
+    if not _clientes:
+        st.info("Nenhum cliente cadastrado ainda. Use o '+' acima para começar.")
+    else:
+        _sel = st.selectbox("Selecione um cliente", _clientes,
+                            format_func=lambda c: f"{c['nome']} · {c['n_servicos']} serviço(s)")
+        if _sel:
+            _cli = crm.cliente(_sel["id"])
+            st.markdown(f"### 👤 {_cli['nome']}")
+            st.caption(f"{_cli['tipo']} · {_cli['documento'] or '—'} · {_cli['email'] or '—'} · {_cli['telefone'] or '—'}")
+            with st.form("form_servico_novo"):
+                _sc1, _sc2 = st.columns([1, 2])
+                with _sc1:
+                    _stp = st.selectbox("Serviço", ["Diagnóstico", "Defesa", "Contrato", "Consulta", "Outro"])
+                with _sc2:
+                    _stit = st.text_input("Descrição do serviço")
+                if st.form_submit_button("Registrar no histórico") and _stit.strip():
+                    crm.registrar_servico(_sel["id"], _stp, _stit); st.rerun()
+            st.markdown("#### Histórico de serviços")
+            _hist = crm.historico(_sel["id"])
+            if _hist:
+                for _h in _hist:
+                    st.markdown(f"- **{_h['criado_em'][:10]}** · _{_h['tipo']}_ — {_h['titulo']}")
+            else:
+                st.caption("Nenhum serviço registrado para este cliente ainda.")
+    st.stop()
+
+if st.session_state.modulo == "defesas":
+    st.markdown("""
+    <div class="banner-transicao">
+      <div class="banner-transicao-titulo">⚖️ &nbsp; Gerador de Defesas — Contencioso Fiscal</div>
+      <div class="banner-transicao-texto">
+        Cole o <strong style="color:#5a80a8;">auto de infração / autuação</strong>. A ferramenta busca os
+        fundamentos legais no acervo (legislação federal + Lei 14.754) e gera uma <strong style="color:#5a80a8;">minuta
+        de impugnação administrativa</strong>. Resultado preliminar — revise e ajuste antes de protocolar.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("**Anexe, fotografe ou cole o auto de infração:**")
+    _ca, _cb = st.columns(2)
+    with _ca:
+        _arq = st.file_uploader("📎 Anexar (PDF, Word ou imagem)",
+                                type=["pdf", "docx", "png", "jpg", "jpeg"], key="def_arq")
+    with _cb:
+        _foto = st.camera_input("📷 Tirar foto (celular)", key="def_foto")
+    _fonte = _arq or _foto
+    if _fonte is not None and st.button("📄 Ler documento", key="btn_ler_def"):
+        with st.spinner("Lendo o documento..."):
+            try:
+                _nome = getattr(_fonte, "name", "foto.jpg")
+                if _nome.lower().endswith((".pdf", ".docx", ".txt")):
+                    from contratos import _extrair_arquivo as _extrai_doc
+                    _txt = _extrai_doc(_fonte)               # PDF/Word: grátis
+                else:
+                    import defesas
+                    _txt = defesas.ler_imagem(_fonte.getvalue(), _nome)  # imagem: IA de visão
+                st.session_state["def_autuacao"] = _txt
+                st.rerun()
+            except Exception as e:
+                st.error(f"Não consegui ler o documento: {e}")
+    autuacao = st.text_area("Texto da autuação (confira/edite antes de gerar)",
+                            height=240, key="def_autuacao",
+                            placeholder="Cole aqui o auto de infração — ou anexe/fotografe acima e clique em 'Ler documento'.")
+    if st.button("⚖️ Gerar minuta de defesa", type="primary",
+                 disabled=not (autuacao and autuacao.strip()), key="btn_gerar_defesa"):
+        with st.spinner("Buscando fundamentos no acervo e redigindo a impugnação... (pode levar até 2 minutos)"):
+            try:
+                import defesas
+                st.session_state["_peca_defesa"] = defesas.gerar_defesa(autuacao)
+            except Exception as e:
+                st.error(f"Não foi possível gerar agora: {e}")
+    if st.session_state.get("_peca_defesa"):
+        peca = st.session_state["_peca_defesa"]
+        st.warning("⚠️ Minuta preliminar — revise, complete os [DADOS A COMPLETAR] e ajuste as teses antes de protocolar. Não substitui advogado.")
+        with st.expander("👁️ Visualizar minuta", expanded=True):
+            st.markdown(peca)
+        from contratos import _gerar_docx as _docx_def
+        st.download_button("📥 Baixar defesa (DOCX)",
+                           data=_docx_def(peca, "Impugnação", "Brasil", ""),
+                           file_name="Minuta_Impugnacao_MAGUS.docx",
+                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                           key="dl_defesa")
+        # vincular ao histórico de um cliente (CRM)
+        import crm
+        crm.init_crm()
+        _cls_def = crm.listar_clientes(st.session_state.get("usuario", {}).get("id", 0))
+        if _cls_def:
+            _vc = st.selectbox("💾 Salvar no histórico de um cliente", [None] + _cls_def,
+                               format_func=lambda c: "— selecione —" if c is None else c["nome"], key="def_vinc")
+            if _vc and st.button("Salvar no histórico", key="btn_vinc_def"):
+                crm.registrar_servico(_vc["id"], "Defesa", "Minuta de impugnação", peca[:300])
+                st.success(f"Defesa salva no histórico de {_vc['nome']} ✅")
+        else:
+            st.caption("Cadastre clientes em **👥 Meus Clientes** para vincular este documento ao histórico.")
     st.stop()
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1971,6 +2159,45 @@ else:
     dados_t, campos_ok_t = _form_transicao()
 
     st.divider()
+
+    # ── Diagnóstico estruturado instantâneo (motor de regras — grátis, sem IA) ──
+    if campos_ok_t:
+        try:
+            import diagnostico_engine as _dx
+            _diag = _dx.diagnosticar(_dx.adaptar_transicao(dados_t))
+            _cor = {"baixo": "#2e7d32", "moderado": "#e6a700",
+                    "alto": "#e06a1a", "critico": "#c62828"}.get(_diag["faixa"], "#888")
+            st.markdown(f"""
+            <div style="border-left:5px solid {_cor};background:#0e1117;padding:14px 18px;border-radius:8px;margin-bottom:10px">
+              <div style="font-size:.78rem;color:#888">Diagnóstico estruturado · instantâneo · sem custo de IA · resultado preliminar</div>
+              <div style="font-size:1.1rem;font-weight:700;color:#e8e8f0;margin:.3rem 0">{_diag["classificacao_descricao"]}</div>
+              <div style="font-size:.92rem;color:{_cor};font-weight:700">{_diag["faixa_label"]} — pontuação {_diag["score"]}/100</div>
+            </div>""", unsafe_allow_html=True)
+            if _diag["alertas"]:
+                with st.expander(f"⚠️ {len(_diag['alertas'])} alerta(s) identificado(s) — clique para ver"):
+                    for _a in _diag["alertas"]:
+                        st.markdown(f"- {_a['texto']}")
+            st.session_state["_diag_transicao"] = _diag
+            from contratos import _gerar_docx as _docx_diag
+            _rel_bytes = _docx_diag(_dx.montar_relatorio(dados_t, _diag),
+                                    "Diagnóstico Residência Fiscal", "Brasil", "")
+            st.download_button("📥 Baixar relatório de diagnóstico (DOCX)", data=_rel_bytes,
+                               file_name="Diagnostico_Residencia_Fiscal_BR-EUA.docx",
+                               mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                               key="dl_diag_transicao")
+            import crm as _crm_d
+            _crm_d.init_crm()
+            _cd = _crm_d.listar_clientes(st.session_state.get("usuario", {}).get("id", 0))
+            if _cd:
+                _vcd = st.selectbox("💾 Salvar no histórico de um cliente", [None] + _cd,
+                                    format_func=lambda c: "— selecione —" if c is None else c["nome"], key="diag_vinc")
+                if _vcd and st.button("Salvar no histórico", key="btn_vinc_diag"):
+                    _crm_d.registrar_servico(_vcd["id"], "Diagnóstico",
+                                             f"{_diag['classificacao_descricao'][:60]} — risco {_diag['score']}/100")
+                    st.success(f"Diagnóstico salvo no histórico de {_vcd['nome']} ✅")
+            st.caption("Para o parecer detalhado e o memo em inglês, clique em **Analisar** abaixo.")
+        except Exception as _e:
+            pass  # diagnóstico estruturado é complementar; nunca quebra o módulo
 
     if not campos_ok_t:
         st.info("Preencha pelo menos: País de residência, Data de saída do Brasil e Dúvida/Objetivo.")
